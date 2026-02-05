@@ -5,10 +5,10 @@
 [![CodeQL](https://github.com/hmake98/nestjs-starter/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/hmake98/nestjs-starter/actions/workflows/github-code-scanning/codeql)
 [![Test](https://github.com/hmake98/nestjs-starter/actions/workflows/test.yml/badge.svg)](https://github.com/hmake98/nestjs-starter/actions/workflows/test.yml)
 ![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)
-![Statements](https://img.shields.io/badge/statements-100%25-brightgreen.svg?style=flat)
-![Branches](https://img.shields.io/badge/branches-97.84%25-brightgreen.svg?style=flat)
-![Functions](https://img.shields.io/badge/functions-100%25-brightgreen.svg?style=flat)
-![Lines](https://img.shields.io/badge/lines-100%25-brightgreen.svg?style=flat)
+![Statements](https://img.shields.io/badge/statements-98.74%25-brightgreen.svg?style=flat)
+![Branches](https://img.shields.io/badge/branches-97.49%25-brightgreen.svg?style=flat)
+![Functions](https://img.shields.io/badge/functions-99.01%25-brightgreen.svg?style=flat)
+![Lines](https://img.shields.io/badge/lines-98.74%25-brightgreen.svg?style=flat)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 </div>
