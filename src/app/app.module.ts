@@ -8,6 +8,8 @@ import { WorkerModule } from 'src/workers/worker.module';
 import { MCPModule } from '../common/mcp/mcp.module';
 
 import { HealthController } from './controllers/health.controller';
+import { TestModule } from 'src/modules/test/test.module';
+import { MqttModule } from 'src/common/mqtt/mqtt.module';
 @Module({
     imports: [
         // Shared Common Services
@@ -25,6 +27,8 @@ import { HealthController } from './controllers/health.controller';
         // Feature Modules
         PostModule,
         UserModule,
+        TestModule,
+        MqttModule,
     ],
     controllers: [HealthController],
 })

@@ -54,28 +54,6 @@ services:
         - ./docker/emqx/data:/opt/emqx/data
         - ./docker/emqx/log:/opt/emqx/log
 
-    server:
-        build:
-            context: .
-            dockerfile: Dockerfile
-            cache_from:
-                - nestjs-app:latest
-        container_name: nestjs-app
-        restart: unless-stopped
-        ports:
-            - '3001:3001'
-        env_file:
-            - .env.docker
-        networks:
-            - app-network
-        volumes:
-            - .:/app
-            - /app/node_modules
-        depends_on:
-            postgres:
-                condition: service_healthy
-            redis:
-                condition: service_healthy
 
 networks:
     app-network:
