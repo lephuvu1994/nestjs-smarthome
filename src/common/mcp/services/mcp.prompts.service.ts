@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { MCPPrompt } from '@hmake98/nestjs-mcp';
+import { MCPPrompt } from '../mcp.decorators';
 
 @Injectable()
 export class MCPPromptsService {

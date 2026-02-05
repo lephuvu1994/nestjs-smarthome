@@ -128,7 +128,7 @@
 ### Prerequisites
 
 - Node.js >= 20.0.0
-- Yarn >= 1.22.0
+- Yarn >= 4.9.0
 - Docker & Docker Compose (for containerized setup)
 - PostgreSQL (if running locally)
 - Redis (if running locally)

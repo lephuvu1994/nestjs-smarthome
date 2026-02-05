@@ -7,7 +7,8 @@ import { useContainer } from 'class-validator';
 import compression from 'compression';
 import express from 'express';
 import { Logger } from 'nestjs-pino';
-import { getMCPHelmetConfig } from '@hmake98/nestjs-mcp';
+import { getMCPHelmetConfig } from './common/mcp/mcp.utils';
+import helmet, { HelmetOptions } from 'helmet';
 
 import { AppModule } from './app/app.module';
 import { APP_ENVIRONMENT } from './app/enums/app.enum';
@@ -30,7 +31,7 @@ async function bootstrap(): Promise<void> {
         const port = config.getOrThrow('app.http.port');
 
         // Middleware
-        app.use(getMCPHelmetConfig()); // Helmet with MCP playground support
+        app.use(helmet(getMCPHelmetConfig() as HelmetOptions)); // Helmet with MCP playground support
         app.use(compression());
         app.useLogger(logger);
         app.enableCors(config.get('app.cors'));

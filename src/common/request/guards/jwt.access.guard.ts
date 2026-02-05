@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import { MCP_IS_PUBLIC } from '@hmake98/nestjs-mcp';
+import { MCP_IS_PUBLIC } from '../../mcp/mcp.constants';
 
 import { PUBLIC_ROUTE_KEY } from '../constants/request.constant';
 

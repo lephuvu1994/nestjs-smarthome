@@ -5,7 +5,7 @@ import { CommonModule } from 'src/common/common.module';
 import { PostModule } from 'src/modules/post/post.module';
 import { UserModule } from 'src/modules/user/user.module';
 import { WorkerModule } from 'src/workers/worker.module';
-import { MCPCommonModule } from 'src/common/mcp/mcp.module';
+import { MCPModule } from '../common/mcp/mcp.module';
 
 import { HealthController } from './controllers/health.controller';
 @Module({
@@ -14,7 +14,7 @@ import { HealthController } from './controllers/health.controller';
         CommonModule,
 
         // MCP Integration
-        MCPCommonModule,
+        MCPModule,
 
         // Background Processing
         WorkerModule,

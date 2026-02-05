@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { MCPTool, MCPToolWithParams } from '@hmake98/nestjs-mcp';
+import { MCPTool, MCPToolWithParams } from '../mcp.decorators';
 
 @Injectable()
 export class MCPToolsService {

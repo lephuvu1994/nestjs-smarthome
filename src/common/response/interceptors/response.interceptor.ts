@@ -7,7 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { ClassConstructor, plainToInstance } from 'class-transformer';
 import { Observable, map } from 'rxjs';
-import { MCP_IS_PUBLIC } from '@hmake98/nestjs-mcp';
+import { MCP_IS_PUBLIC } from '../../mcp/mcp.constants';
 
 import {
     DOC_RESPONSE_MESSAGE_META_KEY,

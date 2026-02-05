@@ -1,13 +1,13 @@
 {
-  "name": "nestjs-starter",
+  "name": "nestjs-smarthome",
   "version": "1.0.0",
-  "description": "Production-ready NestJS boilerplate with JWT auth, PostgreSQL/Prisma, AWS S3/SES, Bull/Redis queues, Docker/K8s support, and MCP integration for AI capabilities",
-  "author": "hmake98",
+  "description": "Smart Home API with NestJS",
+  "author": "vincent.le",
   "license": "MIT",
   "private": true,
   "engines": {
     "node": ">=20.0.0",
-    "yarn": ">=1.22.0"
+    "yarn": ">=4.9.0"
   },
   "scripts": {
     "prepare": "husky",
@@ -34,7 +34,6 @@
     "@aws-sdk/client-ses": "^3.932.0",
     "@aws-sdk/s3-request-presigner": "^3.932.0",
     "@faker-js/faker": "^10.1.0",
-    "@hmake98/nestjs-mcp": "file:.yalc/@hmake98/nestjs-mcp",
     "@nestjs/bull": "^11.0.4",
     "@nestjs/cache-manager": "^3.0.1",
     "@nestjs/common": "^11.1.9",
@@ -47,7 +46,7 @@
     "@nestjs/swagger": "^11.2.2",
     "@nestjs/terminus": "^11.0.0",
     "@nestjs/throttler": "^6.4.0",
-    "@prisma/client": "^6.19.0",
+    "@prisma/client": "6.19.2",
     "@sentry/node": "^10.25.0",
     "@sentry/tracing": "^7.120.4",
     "@types/express": "^5.0.5",
@@ -113,7 +112,7 @@
     "jest": "^30.2.0",
     "lint-staged": "^16.2.6",
     "prettier": "^3.6.2",
-    "prisma": "^6.19.0",
+    "prisma": "6.19.2",
     "rimraf": "^6.1.0",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.5",
@@ -126,9 +125,9 @@
   },
   "lint-staged": {
     "{src,test}/**/*.{ts,js,json}": [
-      "prettier --write",
-      "eslint --fix"
+      "yarn prettier --write",
+      "yarn eslint --fix"
     ]
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  "packageManager": "yarn@4.9.2"
 }

@@ -1,17 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { MCPResource, MCPResourceTemplate } from '@hmake98/nestjs-mcp';
+import { MCPResource, MCPResourceTemplate } from '../mcp.decorators';
 
 @Injectable()
 export class MCPResourcesService {
     /**
      * Static resource - API documentation
      */
-    @MCPResource({
-        uri: 'docs://api/overview',
-        name: 'API Overview',
-        description: 'Overview of the NestJS Starter API',
-        mimeType: 'text/markdown',
-    })
+    @MCPResource('docs://api/overview')
     async getApiOverview() {
         return {
             uri: 'docs://api/overview',
@@ -43,12 +38,7 @@ This is a production-ready NestJS boilerplate with comprehensive features:
     /**
      * Static resource - Server status
      */
-    @MCPResource({
-        uri: 'status://server',
-        name: 'Server Status',
-        description: 'Current server status and configuration',
-        mimeType: 'application/json',
-    })
+    @MCPResource('status://server')
     async getServerStatus() {
         return {
             uri: 'status://server',
