@@ -1,6 +1,6 @@
 import { Controller, Delete, HttpStatus, Param } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 
 import { DocGenericResponse } from 'src/common/doc/decorators/doc.generic.decorator';
 import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
@@ -17,7 +17,7 @@ export class UserAdminController {
     constructor(private readonly userService: UserService) {}
 
     @Delete(':id')
-    @AllowedRoles([Role.ADMIN])
+    @AllowedRoles([UserRole.ADMIN])
     @ApiBearerAuth('accessToken')
     @ApiOperation({ summary: 'Delete user' })
     @DocGenericResponse({

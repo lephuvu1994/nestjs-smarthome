@@ -1,0 +1,42 @@
+### Config biến môi trường
+@baseUrl = http://192.168.0.102:3001/v1
+
+### 1. Đăng ký (Signup)
+POST {{baseUrl}}/auth/signup
+Content-Type: application/json
+
+{
+    "firstName": "Dev2",
+    "lastName": "Cursor2",
+    "email": "cursor2@test.com",
+    "password": "Password@123!"
+}
+
+### 2. Đăng nhập (Login)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "identifier": "cursor@test.com",
+    "password": "Password@123!"
+}
+
+### 3. Đăng nhập admin (Login)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "identifier": "admin@smarthome.com",
+    "password": "Admin@123456"
+}
+
+
+### 3. Đăng ký thiết bị mới (Register device)
+POST {{baseUrl}}/provisioning/register
+Content-Type: application/json
+
+{
+  "mac": "AA:BB:CC:11:22:33",
+  "deviceCode": "WIFI_SWITCH_4",
+  "companyCode": "COMPANY_A"
+}

@@ -10,9 +10,10 @@ import {
     IsString,
     IsUUID,
     IsBoolean,
+    IsNumber,
 } from 'class-validator';
 
-export class UserResponseDto implements Partial<User> {
+export class UserResponseDto {
     @ApiProperty({
         example: faker.string.uuid(),
     })
@@ -20,19 +21,36 @@ export class UserResponseDto implements Partial<User> {
     @IsUUID()
     id: string;
 
+    // --- THÔNG TIN LIÊN HỆ (Email hoặc Phone) ---
     @ApiProperty({
+        description: 'Email (có thể null nếu đăng ký bằng SĐT)',
         example: faker.internet.email(),
+        required: false,
+        nullable: true,
+    })
+    @Expose() // Nếu tên trường DB trùng tên DTO thì không cần { name: ... }
+    @IsEmail()
+    @IsOptional()
+    email: string | null;
+
+    @ApiProperty({
+        description: 'Số điện thoại (có thể null nếu đăng ký bằng Email)',
+        example: faker.phone.number(),
+        required: false,
+        nullable: true,
     })
     @Expose()
-    @IsEmail()
-    email: string;
+    @IsString()
+    @IsOptional()
+    phone: string | null;
 
+    // --- HỌ TÊN (Map từ snake_case DB sang camelCase DTO) ---
     @ApiProperty({
         example: faker.person.firstName(),
         required: false,
         nullable: true,
     })
-    @Expose()
+    @Expose({ name: 'firstname' }) // <--- QUAN TRỌNG: Lấy dữ liệu từ cột 'firstname'
     @IsString()
     @IsOptional()
     firstName: string | null;
@@ -42,11 +60,12 @@ export class UserResponseDto implements Partial<User> {
         required: false,
         nullable: true,
     })
-    @Expose()
+    @Expose({ name: 'lastname' }) // <--- QUAN TRỌNG: Lấy dữ liệu từ cột 'lastname'
     @IsString()
     @IsOptional()
     lastName: string | null;
 
+    // --- THÔNG TIN KHÁC ---
     @ApiProperty({
         example: faker.image.avatar(),
         required: false,
@@ -57,62 +76,63 @@ export class UserResponseDto implements Partial<User> {
     @IsOptional()
     avatar: string | null;
 
+    // Nếu DB không còn cột userName, bạn có thể xóa hoặc dùng @Expose để tự tạo
     @ApiProperty({
         example: faker.internet.username(),
-    })
-    @Expose()
-    @IsString()
-    userName: string;
-
-    @ApiProperty({
-        example: faker.phone.number(),
         required: false,
-        nullable: true,
     })
     @Expose()
-    @IsString()
     @IsOptional()
-    phone: string | null;
+    userName?: string;
 
     @ApiProperty({
-        enum: $Enums.Role,
-        example: faker.helpers.arrayElement(Object.values($Enums.Role)),
+        enum: $Enums.UserRole,
+        example: $Enums.UserRole.USER,
     })
     @Expose()
-    @IsEnum($Enums.Role)
-    role: $Enums.Role;
+    @IsEnum($Enums.UserRole)
+    role: $Enums.UserRole;
 
     @ApiProperty({
-        example: faker.datatype.boolean(),
+        description: 'Trạng thái xác thực',
+        example: true,
     })
-    @Expose()
-    @IsBoolean()
-    isVerified: boolean;
 
+    // --- LOCATION (Vị trí cache mới nhất) ---
+    @ApiProperty({ description: 'Vĩ độ', required: false, example: 21.0285 })
+    @Expose({ name: 'last_latitude' })
+    @IsNumber()
+    @IsOptional()
+    lastLatitude?: number;
+
+    @ApiProperty({ description: 'Kinh độ', required: false, example: 105.8542 })
+    @Expose({ name: 'last_longitude' })
+    @IsNumber()
+    @IsOptional()
+    lastLongitude?: number;
+
+    @ApiProperty({ description: 'Thời gian cập nhật vị trí', required: false })
+    @Expose({ name: 'last_location_changed' })
+    @IsDate()
+    @IsOptional()
+    lastLocationChanged?: Date;
+
+    // --- TIMESTAMPS (Map từ snake_case) ---
     @ApiProperty({
         example: faker.date.past().toISOString(),
     })
-    @Expose()
+    @Expose({ name: 'created_at' }) // Map từ 'created_at'
     @IsDate()
     createdAt: Date;
 
     @ApiProperty({
         example: faker.date.recent().toISOString(),
     })
-    @Expose()
+    @Expose({ name: 'updated_at' }) // Map từ 'updated_at'
     @IsDate()
     updatedAt: Date;
 
-    @ApiProperty({
-        example: faker.date.future().toISOString(),
-        required: false,
-        nullable: true,
-    })
-    @Expose()
-    @IsDate()
-    @IsOptional()
-    deletedAt: Date | null;
-
+    // --- BẢO MẬT (Luôn ẩn Password) ---
     @ApiHideProperty()
     @Exclude()
     password: string;

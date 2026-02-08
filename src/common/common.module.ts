@@ -7,7 +7,6 @@ import * as redisStore from 'cache-manager-ioredis';
 import { AuthModule } from './auth/auth.module';
 import configs from './config';
 import { DatabaseModule } from './database/database.module';
-import { FileModule } from './file/file.module';
 import { CustomLoggerModule } from './logger/logger.module';
 import { RequestModule } from './request/request.module';
 import { ResponseModule } from './response/response.module';
@@ -26,7 +25,6 @@ import { ResponseModule } from './response/response.module';
         // Core Infrastructure
         DatabaseModule,
         AuthModule,
-        FileModule,
 
         // Cross-cutting Concerns
         CustomLoggerModule,

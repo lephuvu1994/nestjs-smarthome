@@ -1,26 +1,29 @@
 import { faker } from '@faker-js/faker';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, Matches } from 'class-validator';
+import { IsNotEmpty, IsString, Matches } from 'class-validator';
 
 export class UserLoginDto {
     @ApiProperty({
-        example: faker.internet.email(),
+        description: 'Email hoặc Số điện thoại',
+        example: 'user@example.com', // Hoặc '0912345678'
         required: true,
     })
-    @IsEmail()
-    @IsNotEmpty()
-    public email: string;
+    // QUAN TRỌNG:
+    // 1. Đổi tên từ 'email' -> 'identifier'
+    // 2. Bỏ @IsEmail() vì nếu nhập SĐT sẽ bị lỗi validation
+    @IsString()
+    @IsNotEmpty({ message: 'Vui lòng nhập Email hoặc Số điện thoại' })
+    public identifier: string;
 
     @ApiProperty({
-        example: `${faker.string.alphanumeric(5).toLowerCase()}${faker.string
-            .alphanumeric(5)
-            .toUpperCase()}@@!${faker.number.int(1000)}`,
+        example: 'Password@123', // Static example cho gọn
         required: true,
     })
     @IsString()
     @IsNotEmpty()
     @Matches(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+        { message: 'Mật khẩu quá yếu (cần chữ hoa, thường, số và ký tự đặc biệt)' }
     )
     public password: string;
 }

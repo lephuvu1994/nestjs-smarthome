@@ -64,14 +64,14 @@ export class HelperEncryptionService implements IHelperEncryptionService {
     public createAccessToken(payload: IAuthUser): Promise<string> {
         return this.jwtService.signAsync(payload, {
             secret: this.accessTokenSecret,
-            expiresIn: this.accessTokenExpire,
+            expiresIn: this.accessTokenExpire as any,
         });
     }
 
     public createRefreshToken(payload: IAuthUser): Promise<string> {
         return this.jwtService.signAsync(payload, {
             secret: this.refreshTokenSecret,
-            expiresIn: this.refreshTokenExpire,
+            expiresIn: this.refreshTokenExpire as any,
         });
     }
 

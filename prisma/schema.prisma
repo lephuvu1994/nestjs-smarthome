@@ -47,39 +47,42 @@ model Session {
   @@index([userId])
   @@map("t_session")
 }
-
-// --- 2. USER ---
 model User {
   id               String   @id @default(uuid()) @db.Uuid
   firstname        String?
-  email            String   @unique
+  lastname         String?
+  // Email và Phone đều là Optional và Unique
+  email     String?  @unique
+  phone     String?  @unique
   password         String
+  role             UserRole @default(USER)
+  otpCode   String?   @map("otp_code")
+  otpExpire DateTime? @map("otp_expire")
 
-  // KHO TÀI SẢN (Inventory)
-  owned_devices    Device[]      @relation("UserInventory")
+  // --- [NEW] VỊ TRÍ HIỆN TẠI (Cache nhanh giống Gladys) ---
+  last_latitude         Float?   // Vĩ độ mới nhất
+  last_longitude        Float?   // Kinh độ mới nhất
+  last_altitude         Float?   // Độ cao
+  last_accuracy         Float?   // Độ chính xác (mét)
+  last_location_changed DateTime? // Thời điểm cập nhật vị trí cuối
 
-  // [FIX] Thêm quan hệ ngược lại cho DeviceShare
-  shared_devices   DeviceShare[] @relation("SharedToUser")
-
-  // QUẢN LÝ NHÀ (Groups)
-  owned_homes      Home[]        @relation("UserHomes")
-
-  // [FIX] Thêm quan hệ ngược lại cho HomeMember (Các nhà mình được mời vào)
-  home_memberships HomeMember[]
-
-  // CÁ NHÂN
-  sessions         Session[]
+  // --- QUAN HỆ ---
+  // Vẫn giữ bảng này để lưu lịch sử di chuyển (History)
   locations        Location[]
 
-  // [FIX] Thêm quan hệ ngược lại cho Calendar
+  // ... (Các quan hệ khác giữ nguyên: devices, homes...)
+  owned_devices    Device[]      @relation("UserInventory")
+  shared_devices   DeviceShare[] @relation("SharedToUser")
+  owned_homes      Home[]        @relation("UserHomes")
+  home_memberships HomeMember[]
+  sessions         Session[]
   calendars        Calendar[]
 
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("t_user")
 }
-
 // --- 3. HOME & ROOM (Groups) ---
 model Home {
   id        String   @id @default(uuid()) @db.Uuid
@@ -389,6 +392,12 @@ model HardwareRegistry {
   // Mã vật lý (Chip ID / MAC Address đã hash) gửi từ firmware lên
   hmac          String   @unique
 
+  // [NEW] Credentials dành cho Chip
+  deviceToken   String   @unique // Token để chip gọi API
+  mqttUsername  String?
+  mqttPassword  String?
+  mqttBroker    String?  // mqtt.server.com
+
   // [NEW] Link tới Logical Device
   // Nếu field này có dữ liệu -> Thiết bị đã được User thêm vào App (Đã claim)
   // Nếu field này null -> Thiết bị chưa có chủ (Chưa claim)
@@ -411,4 +420,13 @@ model HardwareRegistry {
   activatedAt   DateTime @default(now())
 
   @@map("t_hardware_registry")
+}
+
+// 5. [NEW] System Config (Cấu hình toàn hệ thống)
+model SystemConfig {
+  key         String @id // VD: "REFUND_QUOTA_ON_TRANSFER"
+  value       String // "true" / "false"
+  description String?
+
+  @@map("t_system_config")
 }
