@@ -45,8 +45,8 @@ CREATE TABLE "t_session" (
     "userAgent" TEXT,
     "expiresAt" TIMESTAMP(3) NOT NULL,
     "userId" UUID NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "t_session_pkey" PRIMARY KEY ("id")
 );
@@ -240,8 +240,8 @@ CREATE TABLE "t_partner" (
     "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "t_partner_pkey" PRIMARY KEY ("id")
 );
@@ -253,8 +253,8 @@ CREATE TABLE "t_device_model" (
     "name" TEXT NOT NULL,
     "description" TEXT,
     "featureSpecs" JSONB NOT NULL DEFAULT '[]',
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "t_device_model_pkey" PRIMARY KEY ("id")
 );
@@ -267,8 +267,8 @@ CREATE TABLE "t_license_quota" (
     "maxQuantity" INTEGER NOT NULL DEFAULT 0,
     "activatedCount" INTEGER NOT NULL DEFAULT 0,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "t_license_quota_pkey" PRIMARY KEY ("id")
 );

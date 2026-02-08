@@ -225,7 +225,7 @@ describe('PostService', () => {
                         author: true,
                         images: true,
                     },
-                    orderBy: { createdAt: 'desc' },
+                    orderBy: { created_at: 'desc' },
                 }
             );
         });
@@ -261,7 +261,7 @@ describe('PostService', () => {
                         author: true,
                         images: true,
                     },
-                    orderBy: { createdAt: 'desc' },
+                    orderBy: { created_at: 'desc' },
                 }
             );
         });

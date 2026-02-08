@@ -141,7 +141,7 @@ export class BasePrismaQueryDto {
 
     @ApiPropertyOptional({
         description: 'Custom order by object',
-        example: { createdAt: 'desc', name: 'asc' },
+        example: { created_at: 'desc', name: 'asc' },
     })
     @IsOptional()
     @IsObject()

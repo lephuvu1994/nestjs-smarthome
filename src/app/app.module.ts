@@ -10,6 +10,7 @@ import { HealthController } from './controllers/health.controller';
 import { TestModule } from 'src/modules/test/test.module';
 import { MqttModule } from 'src/common/mqtt/mqtt.module';
 import { ProvisioningModule } from 'src/modules/provisioning/provisioning.module';
+import { SocketModule } from 'src/modules/socket/socket.module';
 @Module({
     imports: [
         // Shared Common Services
@@ -28,7 +29,8 @@ import { ProvisioningModule } from 'src/modules/provisioning/provisioning.module
         UserModule,
         TestModule,
         MqttModule,
-        ProvisioningModule
+        ProvisioningModule,
+        SocketModule
 
     ],
     controllers: [HealthController],

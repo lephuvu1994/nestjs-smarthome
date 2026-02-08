@@ -5,6 +5,6 @@ export enum APP_ENVIRONMENT {
     LOCAL = 'local',
 }
 
-export enum APP_BULL_QUEUES {
+export enum APP_BULLMQ_QUEUES {
     EMAIL = 'email_queue',
 }

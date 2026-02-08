@@ -16,7 +16,7 @@ import { ApiPaginatedDataDto } from 'src/common/response/dtos/response.paginated
  *   .paginate({ page: 1, limit: 10 })
  *   .search('john', ['name', 'email'])
  *   .filter({ role: 'USER', isActive: true })
- *   .sort({ createdAt: 'desc' })
+ *   .sort({ created_at: 'desc' })
  *   .include({ posts: true })
  *   .execute();
  * ```

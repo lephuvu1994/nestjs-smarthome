@@ -16,6 +16,7 @@ import { RolesGuard } from 'src/common/request/guards/roles.guard';
 import { JwtAccessGuard } from 'src/common/request/guards/jwt.access.guard';
 import { AllowedRoles } from 'src/common/request/decorators/request.role.decorator';
 import { UpdatePartnerDto } from './dtos/request/update-partner-full.dto';
+import { SetMqttConfigDto } from './dtos/request/set-mqtt-config.dto';
 
 @ApiTags('admin.metadata')
 @Controller({
@@ -101,5 +102,14 @@ export class AdminController {
         @Body() body: UpdatePartnerDto // DTO đã set optional
     ) {
         return this.adminService.updatePartner(code, body);
+    }
+    // config MQTT
+    @Post('configs/mqtt')
+    @ApiOperation({
+        summary: 'Update all MQTT configs at once',
+        description: 'Cập nhật nhanh Host, User, Pass của MQTT Broker.'
+    })
+    setMqttConfig(@Body() body: SetMqttConfigDto) {
+        return this.adminService.setMqttConfig(body);
     }
 }

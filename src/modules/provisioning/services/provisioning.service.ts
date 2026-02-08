@@ -75,7 +75,7 @@ export class ProvisioningService {
             });
 
             // 4. Tạo Hardware Registry
-            const creds = this.generateCredentials(mac);
+            const creds = await this.generateCredentials(mac);
             const newHardware = await prisma.hardwareRegistry.create({
                 data: {
                     hmac: mac,
@@ -83,9 +83,9 @@ export class ProvisioningService {
                     deviceModelId: model.id,
                     // Credentials
                     deviceToken: creds.token,
-                    mqttUsername: creds.username,
-                    mqttPassword: creds.password,
-                    mqttBroker: process.env.MQTT_BROKER_URL || 'mqtt://localhost:1883',
+                    mqttUsername: creds.mqttUsername,
+                    mqttPassword: creds.mqttPassword,
+                    mqttBroker: creds.mqttBroker
                 },
             });
 
@@ -148,7 +148,7 @@ export class ProvisioningService {
 
             // 4. Cập nhật Hardware Registry
             // Tạo credentials mới để đảm bảo bảo mật (Partner cũ ko dùng được nữa)
-            const newCreds = this.generateCredentials(existingHardware.hmac);
+            const newCreds = await this.generateCredentials(existingHardware.hmac);
 
             const updatedHardware = await prisma.hardwareRegistry.update({
                 where: { id: existingHardware.id },
@@ -157,8 +157,8 @@ export class ProvisioningService {
                     deviceModelId: newModel.id,
                     // Cập nhật credentials mới
                     deviceToken: newCreds.token,
-                    mqttUsername: newCreds.username,
-                    mqttPassword: newCreds.password,
+                    mqttUsername: newCreds.mqttUsername,
+                    mqttPassword: newCreds.mqttPassword,
                     // Reset trạng thái ban đầu (tuỳ chọn)
                     isBanned: false,
                 },
@@ -170,12 +170,59 @@ export class ProvisioningService {
 
     // --- HELPER FUNCTIONS ---
 
-    private generateCredentials(mac: string) {
+    // --- ALGORITHM QUY ƯỚC VỚI CHIP ---
+    private encryptCredentialsForChip(mac: string, token: string, user: string, pass: string) {
+        // A. Tạo chuỗi seed
+        const seed = mac + token; // VD: "AA:BB:CC... + a1b2c3..."
+
+        // B. Tạo Key 32 bytes (AES-256) từ SHA256
+        const key = crypto.createHash('sha256').update(seed).digest();
+
+        // C. Tạo IV 16 bytes từ MD5 (Quy ước ngầm)
+        const iv = crypto.createHash('md5').update(seed).digest();
+
+        // D. Payload cần giấu (Format: "username|password")
+        const payload = `${user}|${pass}`;
+
+        // E. Mã hoá AES-256-CBC
+        const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+
+        let encrypted = cipher.update(payload, 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+
+        return encrypted;
+    }
+
+    private async generateCredentials(mac: string) {
+        // 2. Lấy thông tin MQTT Config từ Database (Do Admin quản lý)
+        // Lưu ý: Nên cache lại cái này để đỡ query DB nhiều lần
+        const mqttConfigs = await this.databaseService.systemConfig.findMany({
+            where: {
+                key: { in: ['MQTT_HOST', 'MQTT_USER', 'MQTT_PASS'] }
+            }
+        });
+        const configMap = mqttConfigs.reduce((acc, cur) => ({ ...acc, [cur.key]: cur.value }), {});
+
+        if (!configMap['MQTT_HOST'] || !configMap['MQTT_USER']) {
+            throw new HttpException('System MQTT Config missing', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        // 3. Sinh Device Token ngẫu nhiên (Định danh session)
+        const deviceToken = crypto.randomBytes(32).toString('hex');
+        // 4. Mã hoá MQTT Credential theo thuật toán quy ước
+        const encryptedCreds = this.encryptCredentialsForChip(
+            mac,
+            deviceToken,
+            configMap['MQTT_USER'],
+            configMap['MQTT_PASS']
+        );
         // Tạo chuỗi ngẫu nhiên an toàn
         return {
-            token: crypto.randomBytes(32).toString('hex'), // Token API 64 ký tự
-            username: `device_${mac.replace(/[:]/g, '').toLowerCase()}`,
-            password: crypto.randomBytes(16).toString('hex'), // Mật khẩu MQTT 32 ký tự
+            token: deviceToken, // Token API 64 ký tự
+            mqttBroker: configMap['MQTT_HOST'], // Chip nhận Host
+            encryptedData: encryptedCreds,
+            mqttUsername: configMap['MQTT_USER'],
+            mqttPassword: configMap['MQTT_PASS'],
         };
     }
 
@@ -183,10 +230,7 @@ export class ProvisioningService {
         return {
             deviceToken: hardware.deviceToken,
             mqttBroker: hardware.mqttBroker,
-            mqttUsername: hardware.mqttUsername,
-            mqttPassword: hardware.mqttPassword,
-            mqttTopicSub: `cmd/${hardware.hmac}`,
-            mqttTopicPub: `data/${hardware.hmac}`,
+            encryptedData: hardware.encryptedData
         };
     }
 }

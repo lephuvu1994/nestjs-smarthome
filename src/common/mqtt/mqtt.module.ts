@@ -18,6 +18,11 @@ export const MQTT_SERVICE = 'MQTT_SERVICE';
                         `mqtt://${process.env.MQTT_HOST || '127.0.0.1'}:${process.env.MQTT_PORT || 1883}`,
                     username: process.env.MQTT_USER,
                     password: process.env.MQTT_PASS,
+                    serializer: {
+                        serialize(value: any) {
+                            return JSON.stringify(value.data);
+                        },
+                    },
                 },
             },
         ]),

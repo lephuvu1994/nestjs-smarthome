@@ -21,7 +21,7 @@ import { IHelperPaginationService } from '../interfaces/pagination.service.inter
  *   {
  *     where: { role: 'USER' },
  *     include: { posts: true },
- *     orderBy: { createdAt: 'desc' }
+ *     orderBy: { created_at: 'desc' }
  *   }
  * );
  * ```

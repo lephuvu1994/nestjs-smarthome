@@ -60,7 +60,7 @@ describe('HelperPrismaQueryBuilderService', () => {
             });
 
             expect(mockDelegate.findMany).toHaveBeenCalledWith({
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0,
                 take: 10,
             });
@@ -104,7 +104,7 @@ describe('HelperPrismaQueryBuilderService', () => {
                         },
                     ],
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0,
                 take: 10,
             });
@@ -147,7 +147,7 @@ describe('HelperPrismaQueryBuilderService', () => {
                         },
                     ],
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0,
                 take: 10,
             });
@@ -182,7 +182,7 @@ describe('HelperPrismaQueryBuilderService', () => {
                         },
                     ],
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0,
                 take: 10,
             });
@@ -196,7 +196,7 @@ describe('HelperPrismaQueryBuilderService', () => {
             const options: IQueryOptions = {
                 dateFilters: [
                     {
-                        field: 'createdAt',
+                        field: 'created_at',
                         from: '2024-01-01',
                         to: '2024-12-31',
                     },
@@ -209,14 +209,14 @@ describe('HelperPrismaQueryBuilderService', () => {
                 where: {
                     AND: [
                         {
-                            createdAt: {
+                            created_at: {
                                 gte: new Date('2024-01-01'),
                                 lte: new Date('2024-12-31'),
                             },
                         },
                     ],
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0,
                 take: 10,
             });
@@ -250,7 +250,7 @@ describe('HelperPrismaQueryBuilderService', () => {
                         },
                     ],
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0,
                 take: 10,
             });
@@ -280,7 +280,7 @@ describe('HelperPrismaQueryBuilderService', () => {
                         },
                     ],
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0,
                 take: 10,
             });
@@ -297,7 +297,7 @@ describe('HelperPrismaQueryBuilderService', () => {
             };
 
             const builderOptions = {
-                allowedSortFields: ['name', 'createdAt'],
+                allowedSortFields: ['name', 'created_at'],
             };
 
             await service.buildQuery(mockDelegate, options, builderOptions);
@@ -315,7 +315,7 @@ describe('HelperPrismaQueryBuilderService', () => {
             };
 
             const builderOptions = {
-                allowedSortFields: ['name', 'createdAt'],
+                allowedSortFields: ['name', 'created_at'],
             };
 
             await expect(
@@ -338,7 +338,7 @@ describe('HelperPrismaQueryBuilderService', () => {
             expect(mockDelegate.findMany).toHaveBeenCalledWith({
                 select: { id: true, name: true },
                 include: { posts: true },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0,
                 take: 10,
             });
@@ -360,7 +360,7 @@ describe('HelperPrismaQueryBuilderService', () => {
             await service.buildQuery(mockDelegate, options, builderOptions);
 
             expect(mockDelegate.findMany).toHaveBeenCalledWith({
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0,
                 take: 50, // Should be limited to maxLimit
             });
@@ -401,7 +401,7 @@ describe('HelperPrismaQueryBuilderService', () => {
                 searchQuery: 'test',
                 searchFields: ['name'],
                 filters: { role: 'admin' },
-                dateFilters: [{ field: 'createdAt', from: '2024-01-01' }],
+                dateFilters: [{ field: 'created_at', from: '2024-01-01' }],
                 sortBy: 'name',
                 sortOrder: 'desc',
             };
@@ -428,7 +428,7 @@ describe('HelperPrismaQueryBuilderService', () => {
                                 },
                             ],
                         },
-                        { createdAt: { gte: new Date('2024-01-01') } },
+                        { created_at: { gte: new Date('2024-01-01') } },
                     ],
                 },
                 orderBy: { name: 'desc' },
@@ -481,7 +481,7 @@ describe('HelperPrismaQueryBuilderService', () => {
             });
 
             expect(mockDelegate.findMany).toHaveBeenCalledWith({
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 take: 6, // limit + 1 to check for next page
                 cursor: { id: 'cursor-id' },
             });
@@ -522,7 +522,7 @@ describe('HelperPrismaQueryBuilderService', () => {
 
             // Should not add search conditions
             expect(mockDelegate.findMany).toHaveBeenCalledWith({
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0,
                 take: 10,
             });
@@ -541,7 +541,7 @@ describe('HelperPrismaQueryBuilderService', () => {
             await service.buildQuery(mockDelegate, options);
 
             expect(mockDelegate.findMany).toHaveBeenCalledWith({
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0, // Should default to page 1
                 take: 10,
             });
@@ -568,7 +568,7 @@ describe('HelperPrismaQueryBuilderService', () => {
                         },
                     ],
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0,
                 take: 10,
             });
@@ -587,7 +587,7 @@ describe('HelperPrismaQueryBuilderService', () => {
             await service.buildQuery(mockDelegate, options);
 
             expect(mockDelegate.findMany).toHaveBeenCalledWith({
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0,
                 take: 10,
             });
@@ -611,7 +611,7 @@ describe('HelperPrismaQueryBuilderService', () => {
 
             // Should not include search conditions since all fields were filtered out
             expect(mockDelegate.findMany).toHaveBeenCalledWith({
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0,
                 take: 10,
             });
@@ -645,7 +645,7 @@ describe('HelperPrismaQueryBuilderService', () => {
                         },
                     ],
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0,
                 take: 10,
             });
@@ -656,13 +656,13 @@ describe('HelperPrismaQueryBuilderService', () => {
             mockDelegate.count.mockResolvedValue(0);
 
             const options: IQueryOptions = {
-                orderBy: { name: 'asc', createdAt: 'desc' },
+                orderBy: { name: 'asc', created_at: 'desc' },
             };
 
             await service.buildQuery(mockDelegate, options);
 
             expect(mockDelegate.findMany).toHaveBeenCalledWith({
-                orderBy: { name: 'asc', createdAt: 'desc' },
+                orderBy: { name: 'asc', created_at: 'desc' },
                 skip: 0,
                 take: 10,
             });
@@ -695,7 +695,7 @@ describe('HelperPrismaQueryBuilderService', () => {
                         },
                     ],
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0,
                 take: 10,
             });
@@ -736,7 +736,7 @@ describe('HelperPrismaQueryBuilderService', () => {
                         },
                     ],
                 },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { created_at: 'desc' },
                 skip: 0,
                 take: 10,
             });

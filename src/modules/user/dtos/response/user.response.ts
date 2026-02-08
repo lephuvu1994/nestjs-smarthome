@@ -123,14 +123,14 @@ export class UserResponseDto {
     })
     @Expose({ name: 'created_at' }) // Map từ 'created_at'
     @IsDate()
-    createdAt: Date;
+    created_at: Date;
 
     @ApiProperty({
         example: faker.date.recent().toISOString(),
     })
     @Expose({ name: 'updated_at' }) // Map từ 'updated_at'
     @IsDate()
-    updatedAt: Date;
+    updated_at: Date;
 
     // --- BẢO MẬT (Luôn ẩn Password) ---
     @ApiHideProperty()

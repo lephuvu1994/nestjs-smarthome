@@ -254,8 +254,8 @@ export class HelperPrismaQueryBuilderService implements IHelperPrismaQueryBuilde
             return { [sortBy]: sortOrder };
         }
 
-        // Default sort by createdAt if available
-        return { createdAt: 'desc' };
+        // Default sort by created_at if available
+        return { created_at: 'desc' };
     }
 
     /**

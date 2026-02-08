@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, MqttRecordBuilder } from '@nestjs/microservices';
 import { MQTT_SERVICE } from '../../common/mqtt/mqtt.module'; // Import token từ module MQTT chung
 
 @Injectable()
@@ -11,14 +11,12 @@ export class TestService {
 
     async sayHello() {
         const payload = {
-            msg: 'Hello from NestJS API',
-            timestamp: new Date().toISOString(),
+            state: 'OPEN',
         };
-
         // --- Gửi tin nhắn MQTT (Publish) ---
         // Topic: 'test/hello'
         // emit: Gửi đi mà không cần đợi phản hồi (Fire-and-forget)
-        this.mqttClient.emit('test/hello', payload);
+        this.mqttClient.emit('BKTech/1001/congtaccuacuon/set', payload);
         console.log('Đã bắn tin nhắn sang MQTT topic: test/hello');
 
         // --- Trả về kết quả HTTP ---

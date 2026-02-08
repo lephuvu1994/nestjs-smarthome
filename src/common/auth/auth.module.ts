@@ -1,8 +1,8 @@
-import { BullModule } from '@nestjs/bull';
+import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 
-import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
+import { APP_BULLMQ_QUEUES } from 'src/app/enums/app.enum';
 
 import { DatabaseModule } from '../database/database.module';
 import { HelperModule } from '../helper/helper.module';
@@ -18,8 +18,9 @@ import { AuthService } from './services/auth.service';
         HelperModule,
         PassportModule,
         DatabaseModule,
+        // Đăng ký lại queue email
         BullModule.registerQueue({
-            name: APP_BULL_QUEUES.EMAIL,
+            name: APP_BULLMQ_QUEUES.EMAIL,
         }),
     ],
     providers: [AuthService, JwtAccessStrategy, JwtRefreshStrategy],

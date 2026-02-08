@@ -222,12 +222,12 @@ describe('HelperQueryService', () => {
 
                 await service
                     .query(mockDelegate)
-                    .where({ createdAt: { gte: new Date('2023-01-01') } })
+                    .where({ created_at: { gte: new Date('2023-01-01') } })
                     .execute();
 
                 expect(mockDelegate.findMany).toHaveBeenCalledWith({
                     where: {
-                        AND: [{ createdAt: { gte: new Date('2023-01-01') } }],
+                        AND: [{ created_at: { gte: new Date('2023-01-01') } }],
                     },
                     take: 10,
                     skip: 0,
@@ -255,14 +255,14 @@ describe('HelperQueryService', () => {
 
                 await service
                     .query(mockDelegate)
-                    .sort({ createdAt: 'desc', name: 'asc' })
+                    .sort({ created_at: 'desc', name: 'asc' })
                     .execute();
 
                 expect(mockDelegate.findMany).toHaveBeenCalledWith({
                     where: {},
                     take: 10,
                     skip: 0,
-                    orderBy: { createdAt: 'desc', name: 'asc' },
+                    orderBy: { created_at: 'desc', name: 'asc' },
                 });
             });
 
@@ -369,7 +369,7 @@ describe('HelperQueryService', () => {
                     .paginate({ page: 2, limit: 5 })
                     .search('test', ['name'])
                     .filter({ role: 'USER' })
-                    .sort({ createdAt: 'desc' })
+                    .sort({ created_at: 'desc' })
                     .include({ posts: true })
                     .execute();
 
@@ -391,7 +391,7 @@ describe('HelperQueryService', () => {
                     },
                     take: 5,
                     skip: 5,
-                    orderBy: { createdAt: 'desc' },
+                    orderBy: { created_at: 'desc' },
                     include: { posts: true },
                 });
             });
@@ -523,12 +523,12 @@ describe('HelperQueryService', () => {
 
                 await service
                     .query(mockDelegate)
-                    .sort({ createdAt: 'desc' })
+                    .sort({ created_at: 'desc' })
                     .getFirst();
 
                 expect(mockDelegate.findFirst).toHaveBeenCalledWith({
                     where: {},
-                    orderBy: { createdAt: 'desc' },
+                    orderBy: { created_at: 'desc' },
                 });
             });
 

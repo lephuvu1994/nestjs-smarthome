@@ -40,14 +40,5 @@ export class DeviceProvisioningResponseDto {
     mqttBroker: string;
 
     @ApiProperty()
-    mqttUsername: string;
-
-    @ApiProperty()
-    mqttPassword: string;
-
-    @ApiProperty()
-    mqttTopicPub: string;
-
-    @ApiProperty()
-    mqttTopicSub: string;
+    encryptedData: string;
 }

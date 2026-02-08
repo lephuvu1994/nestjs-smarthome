@@ -4,6 +4,7 @@ import { CreateDeviceModelDto } from './dtos/request/create-model.dto';
 import { CreatePartnerDto } from './dtos/request/create-partner.dto';
 import { PartnerUsageResponseDto } from './dtos/response/partner-usage.response.dto';
 import { UpdatePartnerDto } from './dtos/request/update-partner-full.dto';
+import { SetMqttConfigDto } from './dtos/request/set-mqtt-config.dto';
 
 @Injectable()
 export class AdminService {
@@ -15,7 +16,10 @@ export class AdminService {
             where: { code: data.code },
         });
         if (exists) {
-            throw new HttpException('Partner Code already exists', HttpStatus.CONFLICT);
+            throw new HttpException(
+                'Partner Code already exists',
+                HttpStatus.CONFLICT
+            );
         }
 
         return this.databaseService.partner.create({
@@ -33,7 +37,10 @@ export class AdminService {
             where: { code: data.code },
         });
         if (exists) {
-            throw new HttpException('Device Model Code already exists', HttpStatus.CONFLICT);
+            throw new HttpException(
+                'Device Model Code already exists',
+                HttpStatus.CONFLICT
+            );
         }
 
         return this.databaseService.deviceModel.create({
@@ -60,14 +67,14 @@ export class AdminService {
     async getPartnersUsage(): Promise<PartnerUsageResponseDto[]> {
         // 1. Query DB: Lấy Partner kèm theo Quota và DeviceModel
         const partners = await this.databaseService.partner.findMany({
-            orderBy: { createdAt: 'desc' },
+            orderBy: { created_at: 'desc' },
             select: {
                 code: true,
                 name: true,
                 quotas: {
                     select: {
                         activatedCount: true, // Số lượng đã dùng
-                        maxQuantity: true,    // Tổng cấp phép
+                        maxQuantity: true, // Tổng cấp phép
                         deviceModel: {
                             select: {
                                 code: true,
@@ -80,10 +87,10 @@ export class AdminService {
         });
 
         // 2. Map dữ liệu sang DTO cho gọn gàng
-        return partners.map((partner) => ({
+        return partners.map(partner => ({
             companyCode: partner.code,
             companyName: partner.name,
-            quotas: partner.quotas.map((quota) => ({
+            quotas: partner.quotas.map(quota => ({
                 modelCode: quota.deviceModel.code,
                 modelName: quota.deviceModel.name,
                 used: quota.activatedCount,
@@ -99,7 +106,7 @@ export class AdminService {
                 code: true,
                 name: true,
             },
-            orderBy: { name: 'asc' }
+            orderBy: { name: 'asc' },
         });
     }
 
@@ -110,7 +117,7 @@ export class AdminService {
                 code: true, // Value của Option
                 name: true, // Label của Option
             },
-            orderBy: { name: 'asc' }
+            orderBy: { name: 'asc' },
         });
     }
 
@@ -125,7 +132,7 @@ export class AdminService {
             throw new HttpException('Partner not found', HttpStatus.NOT_FOUND);
         }
 
-        return this.databaseService.$transaction(async (prisma) => {
+        return this.databaseService.$transaction(async prisma => {
             // A. Cập nhật tên (Chỉ chạy nếu có gửi name lên)
             if (data.name) {
                 await prisma.partner.update({
@@ -136,13 +143,13 @@ export class AdminService {
 
             // B. Cập nhật Quota (Chỉ chạy nếu có gửi quotas lên)
             if (data.quotas && data.quotas.length > 0) {
-                const quotaPromises = data.quotas.map(async (item) => {
+                const quotaPromises = data.quotas.map(async item => {
                     const model = await prisma.deviceModel.findUnique({
                         where: { code: item.deviceModelCode },
                     });
 
                     if (!model) {
-                         // Có thể throw lỗi hoặc bỏ qua tuỳ logic, ở đây mình throw
+                        // Có thể throw lỗi hoặc bỏ qua tuỳ logic, ở đây mình throw
                         throw new HttpException(
                             `Device Model Code '${item.deviceModelCode}' not found`,
                             HttpStatus.BAD_REQUEST
@@ -179,7 +186,43 @@ export class AdminService {
     private async getPartnerDetails(code: string) {
         return this.databaseService.partner.findUnique({
             where: { code },
-            include: { quotas: true }
+            include: { quotas: true },
         });
+    }
+
+    /**
+     * Gộp 3 config MQTT vào một lần xử lý
+     */
+    async setMqttConfig(data: SetMqttConfigDto) {
+        const configs = [
+            { key: 'MQTT_HOST', value: data.host, desc: 'MQTT Broker Host' },
+            {
+                key: 'MQTT_USER',
+                value: data.user,
+                desc: 'MQTT Broker Username',
+            },
+            {
+                key: 'MQTT_PASS',
+                value: data.pass,
+                desc: 'MQTT Broker Password',
+            },
+        ];
+
+        // Chạy upsert cho cả 3 key cùng lúc
+        await Promise.all(
+            configs.map(config =>
+                this.databaseService.systemConfig.upsert({
+                    where: { key: config.key },
+                    update: { value: config.value },
+                    create: {
+                        key: config.key,
+                        value: config.value,
+                        description: config.desc,
+                    },
+                })
+            )
+        );
+
+        return { message: 'MQTT Configuration updated successfully' };
     }
 }

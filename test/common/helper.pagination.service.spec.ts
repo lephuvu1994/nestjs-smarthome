@@ -127,7 +127,7 @@ describe('HelperPaginationService', () => {
         it('should pass through additional options', async () => {
             const options = {
                 where: { status: 'active' },
-                orderBy: { createdAt: 'desc' as const },
+                orderBy: { created_at: 'desc' as const },
                 include: { author: true },
             };
 

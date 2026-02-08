@@ -1,4 +1,4 @@
-import { BullModule } from '@nestjs/bull';
+import { BullModule } from '@nestjs/bullmq';
 import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -45,15 +45,16 @@ import { ResponseModule } from './response/response.module';
             }),
             inject: [ConfigService],
         }),
-
-        // Queue Management - Bull/Redis
         BullModule.forRootAsync({
             imports: [ConfigModule],
             useFactory: (configService: ConfigService) => ({
-                redis: {
+                connection: {
                     host: configService.get('redis.host'),
                     port: Number(configService.get('redis.port')),
                     password: configService.get('redis.password'),
+                    // BullMQ khuyến khích thêm maxRetriesPerRequest: null
+                    // để đảm bảo worker không bị ngắt kết nối khi xử lý job nặng
+                    maxRetriesPerRequest: null,
                 },
             }),
             inject: [ConfigService],

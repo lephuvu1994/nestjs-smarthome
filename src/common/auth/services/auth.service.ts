@@ -1,10 +1,10 @@
-import { InjectQueue } from '@nestjs/bull';
+import { InjectQueue } from '@nestjs/bullmq';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
-import { Queue } from 'bull';
+import { Queue } from 'bullmq';
 import { plainToInstance } from 'class-transformer';
 
-import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
+import { APP_BULLMQ_QUEUES } from 'src/app/enums/app.enum';
 import { DatabaseService } from 'src/common/database/services/database.service';
 import {
     EmailTemplate,
@@ -17,7 +17,7 @@ import { IAuthUser } from '../../request/interfaces/request.interface';
 import { UserLoginDto } from '../dtos/request/auth.login.dto';
 import { UserCreateDto } from '../dtos/request/auth.signup.dto';
 import { ForgotPasswordDto } from '../dtos/request/forgot.password.dto'; // Cần tạo file này
-import { ResetPasswordDto } from '../dtos/request/reset.password.dto';   // Cần tạo file này
+import { ResetPasswordDto } from '../dtos/request/reset.password.dto'; // Cần tạo file này
 import {
     AuthRefreshResponseDto,
     AuthResponseDto,
@@ -30,8 +30,8 @@ export class AuthService implements IAuthService {
     constructor(
         private readonly databaseService: DatabaseService,
         private readonly helperEncryptionService: HelperEncryptionService,
-        @InjectQueue(APP_BULL_QUEUES.EMAIL)
-        private emailQueue: Queue
+        @InjectQueue(APP_BULLMQ_QUEUES.EMAIL)
+        private readonly emailQueue: Queue
     ) {}
 
     /**
@@ -70,13 +70,17 @@ export class AuthService implements IAuthService {
             userId: user.id,
         });
 
-        const userDto = plainToInstance(UserResponseDto, {
-            ...user,
-            avatar: null,
-            userName: user.email ? user.email.split('@')[0] : user.phone,
-        }, {
-            excludeExtraneousValues: true,
-        });
+        const userDto = plainToInstance(
+            UserResponseDto,
+            {
+                ...user,
+                avatar: null,
+                userName: user.email ? user.email.split('@')[0] : user.phone,
+            },
+            {
+                excludeExtraneousValues: true,
+            }
+        );
 
         return {
             ...tokens,
@@ -136,18 +140,30 @@ export class AuthService implements IAuthService {
                 },
             };
 
-            this.emailQueue.add(EmailTemplate.WELCOME, emailJobPayload, {
+            // BullMQ: Tên job (EmailTemplate.WELCOME) là bắt buộc để Worker switch-case
+            await this.emailQueue.add(EmailTemplate.WELCOME, emailJobPayload, {
                 delay: 5000,
+                // Cấu hình tối ưu cho BullMQ
+                removeOnComplete: true, // Xóa job khi xong để tiết kiệm RAM Redis
+                attempts: 3, // Thử lại nếu server mail lag
+                backoff: {
+                    type: 'exponential',
+                    delay: 2000, // Đợi 2s trước khi thử lại
+                },
             });
         }
 
-        const userDto = plainToInstance(UserResponseDto, {
-            ...createdUser,
-            avatar: null,
-            userName: email ? email.split('@')[0] : phone,
-        }, {
-            excludeExtraneousValues: true,
-        });
+        const userDto = plainToInstance(
+            UserResponseDto,
+            {
+                ...createdUser,
+                avatar: null,
+                userName: email ? email.split('@')[0] : phone,
+            },
+            {
+                excludeExtraneousValues: true,
+            }
+        );
 
         return {
             ...tokens,
@@ -184,7 +200,10 @@ export class AuthService implements IAuthService {
         });
 
         if (!user) {
-            throw new HttpException('user.error.notFound', HttpStatus.NOT_FOUND);
+            throw new HttpException(
+                'user.error.notFound',
+                HttpStatus.NOT_FOUND
+            );
         }
 
         // C. Tạo OTP 6 số ngẫu nhiên & Hết hạn sau 5 phút
@@ -205,14 +224,23 @@ export class AuthService implements IAuthService {
 
         // E. Gửi OTP qua kênh tương ứng
         if (isEmail) {
-            // Gửi qua Email Queue
-            await this.emailQueue.add(EmailTemplate.FORGOT_PASSWORD, {
+            const emailJobPayload: Partial<ISendEmailParams> = {
                 to: user.email,
                 context: {
                     userName: `${user.firstname} ${user.lastname}`,
-                    otp: otp, // Truyền OTP vào template
+                    otp: otp,
                 },
-            });
+            };
+            // Gửi qua Email Queue
+            await this.emailQueue.add(
+                EmailTemplate.FORGOT_PASSWORD,
+                emailJobPayload,
+                {
+                    removeOnComplete: true,
+                    attempts: 3,
+                    priority: 1, // Email OTP nên được ưu tiên xử lý trước email welcome
+                }
+            );
         } else {
             // Gửi qua SMS (Logic giả lập)
             await this.sendSMS(user.phone, otp);
@@ -247,9 +275,8 @@ export class AuthService implements IAuthService {
         }
 
         // Hash mật khẩu mới
-        const hashedPassword = await this.helperEncryptionService.createHash(
-            newPassword
-        );
+        const hashedPassword =
+            await this.helperEncryptionService.createHash(newPassword);
 
         // Cập nhật mật khẩu và xóa OTP
         await this.databaseService.user.update({
@@ -269,7 +296,9 @@ export class AuthService implements IAuthService {
      */
     private async sendSMS(phone: string, otp: string) {
         // Sau này tích hợp Twilio / eSMS / Viettel vào đây
-        console.log(`[SMS MOCK] Gửi đến ${phone}: Mã xác thực của bạn là ${otp}`);
+        console.log(
+            `[SMS MOCK] Gửi đến ${phone}: Mã xác thực của bạn là ${otp}`
+        );
         return true;
     }
 }
