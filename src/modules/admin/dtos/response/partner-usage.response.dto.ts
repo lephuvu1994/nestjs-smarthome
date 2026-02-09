@@ -10,7 +10,10 @@ export class QuotaUsageDto {
     @ApiProperty({ example: 50, description: 'Số lượng đã kích hoạt (Used)' })
     used: number;
 
-    @ApiProperty({ example: 100, description: 'Tổng số lượng cấp phép (Total)' })
+    @ApiProperty({
+        example: 100,
+        description: 'Tổng số lượng cấp phép (Total)',
+    })
     total: number;
 }
 

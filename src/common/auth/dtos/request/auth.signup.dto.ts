@@ -40,7 +40,7 @@ export class UserCreateDto {
         required: false,
     })
     // ValidateIf: Chỉ validate dòng này nếu field 'phone' bị trống
-    @ValidateIf((o) => !o.phone)
+    @ValidateIf(o => !o.phone)
     @IsNotEmpty({ message: 'Email không được để trống nếu thiếu SĐT' })
     @IsEmail({}, { message: 'Email không đúng định dạng' })
     public email?: string;
@@ -51,7 +51,7 @@ export class UserCreateDto {
         required: false,
     })
     // ValidateIf: Chỉ validate dòng này nếu field 'email' bị trống
-    @ValidateIf((o) => !o.email)
+    @ValidateIf(o => !o.email)
     @IsNotEmpty({ message: 'SĐT không được để trống nếu thiếu Email' })
     @IsString()
     // Bạn có thể thêm Regex cho số điện thoại VN ở đây nếu muốn
@@ -72,7 +72,10 @@ export class UserCreateDto {
     @MinLength(8, { message: 'Mật khẩu phải từ 8 ký tự trở lên' })
     @Matches(
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-        { message: 'Mật khẩu quá yếu (cần chữ hoa, thường, số và ký tự đặc biệt)' }
+        {
+            message:
+                'Mật khẩu quá yếu (cần chữ hoa, thường, số và ký tự đặc biệt)',
+        }
     )
     public password: string;
 }

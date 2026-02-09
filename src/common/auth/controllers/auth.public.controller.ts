@@ -37,7 +37,7 @@ export class AuthPublicController {
     @PublicRoute()
     @ApiOperation({
         summary: 'Login with Email or Phone',
-        description: 'Đăng nhập bằng Email hoặc Số điện thoại và Mật khẩu.'
+        description: 'Đăng nhập bằng Email hoặc Số điện thoại và Mật khẩu.',
     })
     @DocResponse({
         serialization: AuthResponseDto,
@@ -53,7 +53,8 @@ export class AuthPublicController {
     @PublicRoute()
     @ApiOperation({
         summary: 'Register new user',
-        description: 'Đăng ký tài khoản mới (Email hoặc Phone là bắt buộc). Tự động đăng nhập sau khi đăng ký.'
+        description:
+            'Đăng ký tài khoản mới (Email hoặc Phone là bắt buộc). Tự động đăng nhập sau khi đăng ký.',
     })
     @DocResponse({
         serialization: AuthResponseDto,
@@ -71,7 +72,8 @@ export class AuthPublicController {
     @ApiBearerAuth('refreshToken') // Yêu cầu Swagger hiện nút nhập token (cấu hình trong main.ts)
     @ApiOperation({
         summary: 'Refresh Access Token',
-        description: 'Sử dụng Refresh Token để lấy cặp Access/Refresh Token mới.'
+        description:
+            'Sử dụng Refresh Token để lấy cặp Access/Refresh Token mới.',
     })
     @DocResponse({
         serialization: AuthRefreshResponseDto,
