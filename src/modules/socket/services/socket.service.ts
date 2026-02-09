@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Server, Socket } from 'socket.io';
+import { Server } from 'socket.io';
 
 @Injectable()
 export class SocketService {
@@ -28,7 +28,7 @@ export class SocketService {
     public handleDisconnection(userId: string, socketId: string) {
         if (this.userConnections.has(userId)) {
             const sockets = this.userConnections.get(userId);
-            const updatedSockets = sockets.filter((id) => id !== socketId);
+            const updatedSockets = sockets.filter(id => id !== socketId);
 
             if (updatedSockets.length === 0) {
                 this.userConnections.delete(userId);
@@ -66,7 +66,11 @@ export class SocketService {
     /**
      * Gửi tin nhắn đến 1 User trừ socket hiện tại (Ví dụ: Update trạng thái nhưng ko cần gửi lại cho người vừa bấm)
      */
-    public broadcastExcept(excludeSocketId: string, event: string, payload: any) {
+    public broadcastExcept(
+        excludeSocketId: string,
+        event: string,
+        payload: any
+    ) {
         if (!this.server) return;
         this.server.except(excludeSocketId).emit(event, payload);
     }

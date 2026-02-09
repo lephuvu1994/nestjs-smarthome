@@ -215,9 +215,7 @@ export class AuthService implements IAuthService {
         await this.databaseService.user.update({
             where: { id: user.id },
             data: {
-                // @ts-ignore: Bỏ qua check TS nếu chưa chạy generate lại prisma
                 otpCode: otp,
-                // @ts-ignore
                 otpExpire: otpExpire,
             },
         });
@@ -258,9 +256,7 @@ export class AuthService implements IAuthService {
         const user = await this.databaseService.user.findFirst({
             where: {
                 [isEmail ? 'email' : 'phone']: identifier,
-                // @ts-ignore
                 otpCode: otp,
-                // @ts-ignore
                 otpExpire: {
                     gt: new Date(), // Thời gian hết hạn phải lớn hơn hiện tại
                 },
@@ -283,9 +279,7 @@ export class AuthService implements IAuthService {
             where: { id: user.id },
             data: {
                 password: hashedPassword,
-                // @ts-ignore
                 otpCode: null,
-                // @ts-ignore
                 otpExpire: null,
             },
         });

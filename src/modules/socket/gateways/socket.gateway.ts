@@ -1,4 +1,4 @@
-import { Logger, UseGuards } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import {
     OnGatewayConnection,
     OnGatewayDisconnect,
@@ -12,7 +12,6 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 
 import { SocketService } from '../services/socket.service';
-import { HelperEncryptionService } from 'src/common/helper/services/helper.encryption.service';
 
 @WebSocketGateway({
     cors: {
@@ -31,7 +30,7 @@ export class SocketGateway
     constructor(
         private readonly socketService: SocketService,
         private readonly jwtService: JwtService,
-        private readonly configService: ConfigService,
+        private readonly configService: ConfigService
     ) {}
 
     /**
@@ -50,11 +49,13 @@ export class SocketGateway
         try {
             // 1. Lấy token từ handshake (Client gửi lên: io("url", { query: { token: "..." } }))
             const token =
-                client.handshake.query.token as string ||
+                (client.handshake.query.token as string) ||
                 client.handshake.headers.authorization;
 
             if (!token) {
-                this.logger.warn(`Socket ${client.id} missing token. Disconnecting...`);
+                this.logger.warn(
+                    `Socket ${client.id} missing token. Disconnecting...`
+                );
                 client.disconnect();
                 return;
             }
@@ -75,8 +76,10 @@ export class SocketGateway
             this.socketService.handleConnection(payload.userId, client.id);
 
             // 5. Gửi event báo kết nối thành công (giống code cũ: WEBSOCKET_MESSAGE_TYPES.AUTHENTICATION.CONNECTED)
-            client.emit('auth_status', { status: 'connected', userId: payload.userId });
-
+            client.emit('auth_status', {
+                status: 'connected',
+                userId: payload.userId,
+            });
         } catch (error) {
             this.logger.error(`Socket authentication failed: ${error.message}`);
             client.disconnect();
@@ -99,7 +102,9 @@ export class SocketGateway
      */
     @SubscribeMessage('message')
     handleMessage(client: Socket, payload: any): string {
-        this.logger.log(`Received message from ${client.data.userId}: ${JSON.stringify(payload)}`);
+        this.logger.log(
+            `Received message from ${client.data.userId}: ${JSON.stringify(payload)}`
+        );
         return 'Server received!';
     }
 }

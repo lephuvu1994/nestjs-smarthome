@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
-import { $Enums, User } from '@prisma/client';
+import { $Enums } from '@prisma/client';
 import { Exclude, Expose } from 'class-transformer';
 import {
     IsDate,
@@ -9,7 +9,6 @@ import {
     IsOptional,
     IsString,
     IsUUID,
-    IsBoolean,
     IsNumber,
 } from 'class-validator';
 

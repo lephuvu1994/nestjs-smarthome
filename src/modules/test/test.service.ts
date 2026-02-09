@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ClientProxy, MqttRecordBuilder } from '@nestjs/microservices';
+import { ClientProxy } from '@nestjs/microservices';
 import { MQTT_SERVICE } from '../../common/mqtt/mqtt.module'; // Import token từ module MQTT chung
 
 @Injectable()
