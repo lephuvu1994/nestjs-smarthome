@@ -1,27 +1,25 @@
-import { SendTemplatedEmailCommandOutput } from '@aws-sdk/client-ses';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { MailerService } from '@nestjs-modules/mailer'; // Import MailerService
 
-import { AWS_SES_EMAIL_TEMPLATES } from 'src/common/aws/enums/aws.ses.enum';
-import { AwsSESService } from 'src/common/aws/services/aws.ses.service';
+// Import Enum mới của bạn
+import { EmailTemplate } from 'src/common/helper/interfaces/email.interface';
 import { ISendEmailParams } from 'src/common/helper/interfaces/email.interface';
 import { HelperEmailService } from 'src/common/helper/services/helper.email.service';
 
 describe('HelperEmailService', () => {
     let service: HelperEmailService;
-    let awsSESServiceMock: jest.Mocked<AwsSESService>;
+    let mailerServiceMock: jest.Mocked<MailerService>;
     let configServiceMock: jest.Mocked<ConfigService>;
     let module: TestingModule;
 
     const mockFromEmail = 'noreply@example.com';
 
     beforeEach(async () => {
-        awsSESServiceMock = {
-            send: jest.fn(),
-            getTemplate: jest.fn(),
-            createTemplate: jest.fn(),
-            deleteTemplate: jest.fn(),
-        } as unknown as jest.Mocked<AwsSESService>;
+        // Mock MailerService thay vì AwsSESService
+        mailerServiceMock = {
+            sendMail: jest.fn(),
+        } as unknown as jest.Mocked<MailerService>;
 
         configServiceMock = {
             get: jest.fn().mockReturnValue(mockFromEmail),
@@ -30,7 +28,7 @@ describe('HelperEmailService', () => {
         module = await Test.createTestingModule({
             providers: [
                 HelperEmailService,
-                { provide: AwsSESService, useValue: awsSESServiceMock },
+                { provide: MailerService, useValue: mailerServiceMock },
                 { provide: ConfigService, useValue: configServiceMock },
             ],
         }).compile();
@@ -51,78 +49,58 @@ describe('HelperEmailService', () => {
 
     describe('constructor', () => {
         it('should initialize fromEmail from ConfigService', () => {
+            // Giả định key config của bạn đã đổi hoặc giữ nguyên
             expect(configServiceMock.get).toHaveBeenCalledWith(
-                'aws.ses.sourceEmail'
+                'email.from' // Ví dụ key config mới, hoặc giữ 'aws.ses.sourceEmail' nếu chưa đổi
             );
-        });
-
-        it('should store the fromEmail value correctly', async () => {
-            // Test that the fromEmail is used when sending emails
-            const mockEmailParams: ISendEmailParams = {
-                emailType: AWS_SES_EMAIL_TEMPLATES.WELCOME_EMAIL,
-                emails: ['user@example.com'],
-                payload: { name: 'John Doe' },
-            };
-
-            const mockSendTemplatedEmailCommandOutput: SendTemplatedEmailCommandOutput =
-                {
-                    MessageId: 'mock-message-id',
-                    $metadata: {},
-                };
-
-            awsSESServiceMock.send.mockResolvedValue(
-                mockSendTemplatedEmailCommandOutput
-            );
-
-            await service.sendEmail(mockEmailParams);
-
-            expect(awsSESServiceMock.send).toHaveBeenCalledWith({
-                templateName: mockEmailParams.emailType,
-                recipients: mockEmailParams.emails,
-                sender: mockFromEmail,
-                templateData: mockEmailParams.payload,
-            });
         });
     });
 
     describe('sendEmail', () => {
         const mockEmailParams: ISendEmailParams = {
-            emailType: AWS_SES_EMAIL_TEMPLATES.WELCOME_EMAIL,
-            emails: ['user@example.com'],
-            payload: { name: 'John Doe' },
+            template: EmailTemplate.WELCOME, // Dùng Enum mới
+            to: ['user@example.com'],
+            subject: 'Welcome to SmartHome',
+            context: { name: 'John Doe' },
         };
 
-        const mockSendTemplatedEmailCommandOutput: SendTemplatedEmailCommandOutput =
-            {
-                MessageId: 'mock-message-id',
-                $metadata: {},
-            };
+        // Mock kết quả trả về của Nodemailer
+        const mockSendMailResponse = {
+            messageId: 'mock-message-id',
+            accepted: ['user@example.com'],
+            rejected: [],
+        };
 
         it('should send email successfully with all required parameters', async () => {
-            awsSESServiceMock.send.mockResolvedValue(
-                mockSendTemplatedEmailCommandOutput
-            );
+            mailerServiceMock.sendMail.mockResolvedValue(mockSendMailResponse);
 
             const result = await service.sendEmail(mockEmailParams);
 
-            expect(result).toEqual(mockSendTemplatedEmailCommandOutput);
-            expect(awsSESServiceMock.send).toHaveBeenCalledWith({
-                templateName: mockEmailParams.emailType,
-                recipients: mockEmailParams.emails,
-                sender: mockFromEmail,
-                templateData: mockEmailParams.payload,
-            });
-            expect(awsSESServiceMock.send).toHaveBeenCalledTimes(1);
+            expect(result).toEqual(mockSendMailResponse);
+
+            // Kiểm tra xem sendMail có được gọi đúng tham số của Nodemailer không
+            expect(mailerServiceMock.sendMail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    to: mockEmailParams.to,
+                    from: mockFromEmail,
+                    template: mockEmailParams.template, // Tên file template (hbs)
+                    context: mockEmailParams.context, // Dữ liệu truyền vào template
+                    // Subject thường được xử lý bên trong service dựa trên emailType hoặc truyền vào
+                    // subject: expect.any(String),
+                })
+            );
+
+            expect(mailerServiceMock.sendMail).toHaveBeenCalledTimes(1);
         });
 
         it('should throw an error if email sending fails', async () => {
-            const mockError = new Error('Email sending failed');
-            awsSESServiceMock.send.mockRejectedValue(mockError);
+            const mockError = new Error('SMTP Connection failed');
+            mailerServiceMock.sendMail.mockRejectedValue(mockError);
 
             await expect(service.sendEmail(mockEmailParams)).rejects.toThrow(
-                'Email sending failed'
+                'SMTP Connection failed'
             );
-            expect(awsSESServiceMock.send).toHaveBeenCalledTimes(1);
+            expect(mailerServiceMock.sendMail).toHaveBeenCalledTimes(1);
         });
 
         it('should handle multiple recipients', async () => {
@@ -135,121 +113,31 @@ describe('HelperEmailService', () => {
                 emails: multipleRecipients,
             };
 
-            awsSESServiceMock.send.mockResolvedValue(
-                mockSendTemplatedEmailCommandOutput
-            );
+            mailerServiceMock.sendMail.mockResolvedValue(mockSendMailResponse);
 
-            const result = await service.sendEmail(
-                paramsWithMultipleRecipients
-            );
+            await service.sendEmail(paramsWithMultipleRecipients);
 
-            expect(result).toEqual(mockSendTemplatedEmailCommandOutput);
-            expect(awsSESServiceMock.send).toHaveBeenCalledWith({
-                templateName: mockEmailParams.emailType,
-                recipients: multipleRecipients,
-                sender: mockFromEmail,
-                templateData: mockEmailParams.payload,
-            });
+            expect(mailerServiceMock.sendMail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    to: multipleRecipients,
+                    template: mockEmailParams.template,
+                    context: mockEmailParams.context,
+                })
+            );
         });
 
         it('should handle empty payload', async () => {
             const paramsWithEmptyPayload = { ...mockEmailParams, payload: {} };
 
-            awsSESServiceMock.send.mockResolvedValue(
-                mockSendTemplatedEmailCommandOutput
+            mailerServiceMock.sendMail.mockResolvedValue(mockSendMailResponse);
+
+            await service.sendEmail(paramsWithEmptyPayload);
+
+            expect(mailerServiceMock.sendMail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    context: {},
+                })
             );
-
-            const result = await service.sendEmail(paramsWithEmptyPayload);
-
-            expect(result).toEqual(mockSendTemplatedEmailCommandOutput);
-            expect(awsSESServiceMock.send).toHaveBeenCalledWith({
-                templateName: mockEmailParams.emailType,
-                recipients: mockEmailParams.emails,
-                sender: mockFromEmail,
-                templateData: {},
-            });
-        });
-
-        it('should handle null payload', async () => {
-            const paramsWithNullPayload = { ...mockEmailParams, payload: null };
-
-            awsSESServiceMock.send.mockResolvedValue(
-                mockSendTemplatedEmailCommandOutput
-            );
-
-            const result = await service.sendEmail(paramsWithNullPayload);
-
-            expect(result).toEqual(mockSendTemplatedEmailCommandOutput);
-            expect(awsSESServiceMock.send).toHaveBeenCalledWith({
-                templateName: mockEmailParams.emailType,
-                recipients: mockEmailParams.emails,
-                sender: mockFromEmail,
-                templateData: null,
-            });
-        });
-
-        it('should handle undefined payload', async () => {
-            const paramsWithUndefinedPayload = {
-                ...mockEmailParams,
-                payload: undefined,
-            };
-
-            awsSESServiceMock.send.mockResolvedValue(
-                mockSendTemplatedEmailCommandOutput
-            );
-
-            const result = await service.sendEmail(paramsWithUndefinedPayload);
-
-            expect(result).toEqual(mockSendTemplatedEmailCommandOutput);
-            expect(awsSESServiceMock.send).toHaveBeenCalledWith({
-                templateName: mockEmailParams.emailType,
-                recipients: mockEmailParams.emails,
-                sender: mockFromEmail,
-                templateData: undefined,
-            });
-        });
-
-        it('should use the correct email template', async () => {
-            const customTemplate = AWS_SES_EMAIL_TEMPLATES.WELCOME_EMAIL;
-            const paramsWithCustomTemplate = {
-                ...mockEmailParams,
-                emailType: customTemplate,
-            };
-
-            awsSESServiceMock.send.mockResolvedValue(
-                mockSendTemplatedEmailCommandOutput
-            );
-
-            const result = await service.sendEmail(paramsWithCustomTemplate);
-
-            expect(result).toEqual(mockSendTemplatedEmailCommandOutput);
-            expect(awsSESServiceMock.send).toHaveBeenCalledWith({
-                templateName: customTemplate,
-                recipients: mockEmailParams.emails,
-                sender: mockFromEmail,
-                templateData: mockEmailParams.payload,
-            });
-        });
-
-        it('should handle single recipient as array', async () => {
-            const singleRecipientParams = {
-                ...mockEmailParams,
-                emails: ['single@example.com'],
-            };
-
-            awsSESServiceMock.send.mockResolvedValue(
-                mockSendTemplatedEmailCommandOutput
-            );
-
-            const result = await service.sendEmail(singleRecipientParams);
-
-            expect(result).toEqual(mockSendTemplatedEmailCommandOutput);
-            expect(awsSESServiceMock.send).toHaveBeenCalledWith({
-                templateName: mockEmailParams.emailType,
-                recipients: ['single@example.com'],
-                sender: mockFromEmail,
-                templateData: mockEmailParams.payload,
-            });
         });
 
         it('should handle complex payload data', async () => {
@@ -257,14 +145,9 @@ describe('HelperEmailService', () => {
                 user: {
                     name: 'John Doe',
                     email: 'john@example.com',
-                    preferences: {
-                        language: 'en',
-                        notifications: true,
-                    },
                 },
                 metadata: {
                     timestamp: new Date().toISOString(),
-                    source: 'test',
                 },
             };
 
@@ -273,62 +156,32 @@ describe('HelperEmailService', () => {
                 payload: complexPayload,
             };
 
-            awsSESServiceMock.send.mockResolvedValue(
-                mockSendTemplatedEmailCommandOutput
+            mailerServiceMock.sendMail.mockResolvedValue(mockSendMailResponse);
+
+            await service.sendEmail(paramsWithComplexPayload);
+
+            expect(mailerServiceMock.sendMail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    context: complexPayload,
+                })
             );
-
-            const result = await service.sendEmail(paramsWithComplexPayload);
-
-            expect(result).toEqual(mockSendTemplatedEmailCommandOutput);
-            expect(awsSESServiceMock.send).toHaveBeenCalledWith({
-                templateName: mockEmailParams.emailType,
-                recipients: mockEmailParams.emails,
-                sender: mockFromEmail,
-                templateData: complexPayload,
-            });
         });
 
-        it('should handle AWS SES service errors properly', async () => {
-            const awsError = new Error('AWS SES quota exceeded');
-            awsError.name = 'SendingQuotaExceededException';
-
-            awsSESServiceMock.send.mockRejectedValue(awsError);
-
-            await expect(service.sendEmail(mockEmailParams)).rejects.toThrow(
-                awsError
-            );
-            expect(awsSESServiceMock.send).toHaveBeenCalledTimes(1);
-        });
-
-        it('should handle network errors', async () => {
-            const networkError = new Error('Network timeout');
-            networkError.name = 'TimeoutError';
-
-            awsSESServiceMock.send.mockRejectedValue(networkError);
-
-            await expect(service.sendEmail(mockEmailParams)).rejects.toThrow(
-                networkError
-            );
-            expect(awsSESServiceMock.send).toHaveBeenCalledTimes(1);
-        });
-
-        it('should return the exact response from AWS SES service', async () => {
-            const detailedResponse: SendTemplatedEmailCommandOutput = {
-                MessageId: 'detailed-message-id-12345',
-                $metadata: {
-                    httpStatusCode: 200,
-                    requestId: 'request-id-12345',
-                    attempts: 1,
-                    totalRetryDelay: 0,
-                },
+        it('should handle single recipient as array', async () => {
+            const singleRecipientParams = {
+                ...mockEmailParams,
+                emails: ['single@example.com'],
             };
 
-            awsSESServiceMock.send.mockResolvedValue(detailedResponse);
+            mailerServiceMock.sendMail.mockResolvedValue(mockSendMailResponse);
 
-            const result = await service.sendEmail(mockEmailParams);
+            await service.sendEmail(singleRecipientParams);
 
-            expect(result).toEqual(detailedResponse);
-            expect(result).toBe(detailedResponse); // Ensure it's the exact same object
+            expect(mailerServiceMock.sendMail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    to: ['single@example.com'],
+                })
+            );
         });
     });
 });

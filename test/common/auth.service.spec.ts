@@ -1,9 +1,9 @@
-import { getQueueToken } from '@nestjs/bull';
+import { getQueueToken } from '@nestjs/bullmq';
 import { HttpException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { Role } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 
-import { APP_BULL_QUEUES } from 'src/app/enums/app.enum';
+import { APP_BULLMQ_QUEUES } from 'src/app/enums/app.enum';
 import { AuthService } from 'src/common/auth/services/auth.service';
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { HelperEncryptionService } from 'src/common/helper/services/helper.encryption.service';
@@ -38,7 +38,7 @@ describe('AuthService', () => {
                     useValue: mockHelperEncryptionService,
                 },
                 {
-                    provide: getQueueToken(APP_BULL_QUEUES.EMAIL),
+                    provide: getQueueToken(APP_BULLMQ_QUEUES.EMAIL),
                     useValue: mockEmailQueue,
                 },
             ],
@@ -57,7 +57,7 @@ describe('AuthService', () => {
 
             await expect(
                 service.login({
-                    email: 'test@example.com',
+                    identifier: 'test@example.com',
                     password: 'password123',
                 })
             ).rejects.toThrow(HttpException);
@@ -72,7 +72,7 @@ describe('AuthService', () => {
 
             await expect(
                 service.login({
-                    email: 'test@example.com',
+                    identifier: 'test@example.com',
                     password: 'wrong_password',
                 })
             ).rejects.toThrow(HttpException);
@@ -82,7 +82,7 @@ describe('AuthService', () => {
             const mockUser = {
                 id: '123',
                 password: 'hashed_password',
-                role: Role.USER,
+                role: UserRole.USER,
             };
             const mockTokens = {
                 accessToken: 'access_token',
@@ -96,7 +96,7 @@ describe('AuthService', () => {
             );
 
             const result = await service.login({
-                email: 'test@example.com',
+                identifier: 'test@example.com',
                 password: 'password123',
             });
 
@@ -121,7 +121,7 @@ describe('AuthService', () => {
                 id: '123',
                 email: 'new@example.com',
                 userName: 'newuser',
-                role: Role.USER,
+                role: UserRole.USER,
             };
             const tokens = {
                 accessToken: 'access_token',
@@ -162,7 +162,7 @@ describe('AuthService', () => {
 
             const result = await service.refreshTokens({
                 userId: '123',
-                role: Role.USER,
+                role: UserRole.USER,
             });
 
             expect(result).toEqual(tokens);
