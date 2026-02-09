@@ -34,7 +34,7 @@ export class UserResponseDto {
 
     @ApiProperty({
         description: 'Số điện thoại (có thể null nếu đăng ký bằng Email)',
-        example: faker.phone.number(),
+        example: '+84909090909',
         required: false,
         nullable: true,
     })
@@ -66,7 +66,7 @@ export class UserResponseDto {
 
     // --- THÔNG TIN KHÁC ---
     @ApiProperty({
-        example: faker.image.avatar(),
+        example: 'https://example.com/avatar.jpg',
         required: false,
         nullable: true,
     })
@@ -125,7 +125,7 @@ export class UserResponseDto {
     created_at: Date;
 
     @ApiProperty({
-        example: faker.date.recent().toISOString(),
+        example: new Date().toISOString(),
     })
     @Expose({ name: 'updated_at' }) // Map từ 'updated_at'
     @IsDate()

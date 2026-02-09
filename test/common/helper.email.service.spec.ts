@@ -1,185 +1,117 @@
-import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { MailerService } from '@nestjs-modules/mailer'; // Import MailerService
-
-// Import Enum mới của bạn
-import { EmailTemplate } from 'src/common/helper/interfaces/email.interface';
-import { ISendEmailParams } from 'src/common/helper/interfaces/email.interface';
 import { HelperEmailService } from 'src/common/helper/services/helper.email.service';
+import { MailerService } from '@nestjs-modules/mailer';
+import { Logger } from '@nestjs/common';
 
 describe('HelperEmailService', () => {
     let service: HelperEmailService;
-    let mailerServiceMock: jest.Mocked<MailerService>;
-    let configServiceMock: jest.Mocked<ConfigService>;
-    let module: TestingModule;
+    let mailerServiceMock: any;
 
-    const mockFromEmail = 'noreply@example.com';
+    // Mock dữ liệu mẫu
+    const mockPayload = {
+        to: 'test@example.com',
+        subject: 'Test Subject',
+        template: 'test-template',
+        context: { name: 'Test User' },
+    };
+
+    beforeAll(() => {
+        // Tắt Logger của NestJS để output test cho gọn (không in log Error/Log ra console)
+        jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
+        jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    });
 
     beforeEach(async () => {
-        // Mock MailerService thay vì AwsSESService
+        // 1. Tạo Mock cho MailerService
         mailerServiceMock = {
-            sendMail: jest.fn(),
-        } as unknown as jest.Mocked<MailerService>;
+            sendMail: jest.fn().mockResolvedValue({ messageId: 'mock-id' }),
+        };
 
-        configServiceMock = {
-            get: jest.fn().mockReturnValue(mockFromEmail),
-        } as unknown as jest.Mocked<ConfigService>;
-
-        module = await Test.createTestingModule({
+        const module: TestingModule = await Test.createTestingModule({
             providers: [
                 HelperEmailService,
-                { provide: MailerService, useValue: mailerServiceMock },
-                { provide: ConfigService, useValue: configServiceMock },
+                {
+                    provide: MailerService,
+                    useValue: mailerServiceMock,
+                },
             ],
         }).compile();
 
         service = module.get<HelperEmailService>(HelperEmailService);
     });
 
-    afterEach(async () => {
+    afterEach(() => {
         jest.clearAllMocks();
-        if (module) {
-            await module.close();
-        }
     });
 
     it('should be defined', () => {
         expect(service).toBeDefined();
     });
 
-    describe('constructor', () => {
-        it('should initialize fromEmail from ConfigService', () => {
-            // Giả định key config của bạn đã đổi hoặc giữ nguyên
-            expect(configServiceMock.get).toHaveBeenCalledWith(
-                'email.from' // Ví dụ key config mới, hoặc giữ 'aws.ses.sourceEmail' nếu chưa đổi
+    // --- TEST 1: Hàm chung sendEmail ---
+    describe('sendEmail', () => {
+        it('should call mailerService.sendMail with correct parameters', async () => {
+            await service.sendEmail(mockPayload);
+
+            // Kiểm tra xem hàm sendMail của thư viện có được gọi đúng không
+            expect(mailerServiceMock.sendMail).toHaveBeenCalledWith({
+                to: mockPayload.to,
+                subject: mockPayload.subject,
+                template: `./${mockPayload.template}`, // Logic trong code của bạn có thêm "./"
+                context: mockPayload.context,
+            });
+            expect(mailerServiceMock.sendMail).toHaveBeenCalledTimes(1);
+        });
+
+        it('should log error and re-throw if sending fails', async () => {
+            // Giả lập lỗi SMTP
+            const error = new Error('SMTP Error');
+            mailerServiceMock.sendMail.mockRejectedValue(error);
+
+            // Expect hàm sẽ ném lỗi ra ngoài (để Queue bắt được)
+            await expect(service.sendEmail(mockPayload)).rejects.toThrow(
+                'SMTP Error'
             );
+
+            // Đảm bảo hàm sendMail vẫn được gọi 1 lần
+            expect(mailerServiceMock.sendMail).toHaveBeenCalledTimes(1);
         });
     });
 
-    describe('sendEmail', () => {
-        const mockEmailParams: ISendEmailParams = {
-            template: EmailTemplate.WELCOME, // Dùng Enum mới
-            to: ['user@example.com'],
-            subject: 'Welcome to SmartHome',
-            context: { name: 'John Doe' },
-        };
+    // --- TEST 2: Hàm cụ thể sendForgotPassword ---
+    describe('sendForgotPassword', () => {
+        it('should construct correct URL and context, then call sendEmail', async () => {
+            const email = 'user@example.com';
+            const name = 'John Doe';
+            const token = 'abc-123-token';
 
-        // Mock kết quả trả về của Nodemailer
-        const mockSendMailResponse = {
-            messageId: 'mock-message-id',
-            accepted: ['user@example.com'],
-            rejected: [],
-        };
+            // Spy vào hàm sendEmail của chính service đó để xem nó nhận được gì
+            const sendEmailSpy = jest.spyOn(service, 'sendEmail');
 
-        it('should send email successfully with all required parameters', async () => {
-            mailerServiceMock.sendMail.mockResolvedValue(mockSendMailResponse);
+            await service.sendForgotPassword(email, name, token);
 
-            const result = await service.sendEmail(mockEmailParams);
+            // Kiểm tra logic tạo URL
+            const expectedUrl = `https://your-app.com/reset-password?token=${token}`;
 
-            expect(result).toEqual(mockSendMailResponse);
-
-            // Kiểm tra xem sendMail có được gọi đúng tham số của Nodemailer không
-            expect(mailerServiceMock.sendMail).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    to: mockEmailParams.to,
-                    from: mockFromEmail,
-                    template: mockEmailParams.template, // Tên file template (hbs)
-                    context: mockEmailParams.context, // Dữ liệu truyền vào template
-                    // Subject thường được xử lý bên trong service dựa trên emailType hoặc truyền vào
-                    // subject: expect.any(String),
-                })
-            );
-
-            expect(mailerServiceMock.sendMail).toHaveBeenCalledTimes(1);
-        });
-
-        it('should throw an error if email sending fails', async () => {
-            const mockError = new Error('SMTP Connection failed');
-            mailerServiceMock.sendMail.mockRejectedValue(mockError);
-
-            await expect(service.sendEmail(mockEmailParams)).rejects.toThrow(
-                'SMTP Connection failed'
-            );
-            expect(mailerServiceMock.sendMail).toHaveBeenCalledTimes(1);
-        });
-
-        it('should handle multiple recipients', async () => {
-            const multipleRecipients = [
-                'user1@example.com',
-                'user2@example.com',
-            ];
-            const paramsWithMultipleRecipients = {
-                ...mockEmailParams,
-                emails: multipleRecipients,
-            };
-
-            mailerServiceMock.sendMail.mockResolvedValue(mockSendMailResponse);
-
-            await service.sendEmail(paramsWithMultipleRecipients);
-
-            expect(mailerServiceMock.sendMail).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    to: multipleRecipients,
-                    template: mockEmailParams.template,
-                    context: mockEmailParams.context,
-                })
-            );
-        });
-
-        it('should handle empty payload', async () => {
-            const paramsWithEmptyPayload = { ...mockEmailParams, payload: {} };
-
-            mailerServiceMock.sendMail.mockResolvedValue(mockSendMailResponse);
-
-            await service.sendEmail(paramsWithEmptyPayload);
-
-            expect(mailerServiceMock.sendMail).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    context: {},
-                })
-            );
-        });
-
-        it('should handle complex payload data', async () => {
-            const complexPayload = {
-                user: {
-                    name: 'John Doe',
-                    email: 'john@example.com',
+            // Kiểm tra hàm sendEmail được gọi với đúng tham số đã chế biến
+            expect(sendEmailSpy).toHaveBeenCalledWith({
+                to: email,
+                subject: 'Khôi phục mật khẩu Smart Home',
+                template: 'forgot-password',
+                context: {
+                    name: name,
+                    url: expectedUrl,
                 },
-                metadata: {
-                    timestamp: new Date().toISOString(),
-                },
-            };
+            });
 
-            const paramsWithComplexPayload = {
-                ...mockEmailParams,
-                payload: complexPayload,
-            };
-
-            mailerServiceMock.sendMail.mockResolvedValue(mockSendMailResponse);
-
-            await service.sendEmail(paramsWithComplexPayload);
-
+            // Kiểm tra sâu hơn: MailerService thực tế được gọi như thế nào
             expect(mailerServiceMock.sendMail).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    context: complexPayload,
-                })
-            );
-        });
-
-        it('should handle single recipient as array', async () => {
-            const singleRecipientParams = {
-                ...mockEmailParams,
-                emails: ['single@example.com'],
-            };
-
-            mailerServiceMock.sendMail.mockResolvedValue(mockSendMailResponse);
-
-            await service.sendEmail(singleRecipientParams);
-
-            expect(mailerServiceMock.sendMail).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    to: ['single@example.com'],
+                    to: email,
+                    template: './forgot-password', // Code gốc nối thêm "./"
+                    context: expect.objectContaining({
+                        url: expectedUrl,
+                    }),
                 })
             );
         });

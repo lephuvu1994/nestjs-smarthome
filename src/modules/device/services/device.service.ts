@@ -11,7 +11,6 @@ import { APP_BULLMQ_QUEUES } from 'src/app/enums/app.enum';
 import { IDeviceCommand } from '../interfaces/device-control.interface';
 import { RedisService } from 'src/common/redis/services/redis.service'; // Giả định bạn có service này
 import { DatabaseService } from 'src/common/database/services/database.service';
-import { DeviceProtocol, User } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 import { RegisterDeviceDto } from '../dto/register-device.dto';
 
