@@ -10,6 +10,7 @@ import { DatabaseModule } from './database/database.module';
 import { CustomLoggerModule } from './logger/logger.module';
 import { RequestModule } from './request/request.module';
 import { ResponseModule } from './response/response.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
     imports: [
@@ -25,6 +26,7 @@ import { ResponseModule } from './response/response.module';
         // Core Infrastructure
         DatabaseModule,
         AuthModule,
+        RedisModule,
 
         // Cross-cutting Concerns
         CustomLoggerModule,
@@ -60,6 +62,6 @@ import { ResponseModule } from './response/response.module';
             inject: [ConfigService],
         }),
     ],
-    exports: [DatabaseModule],
+    exports: [DatabaseModule, RedisModule],
 })
 export class CommonModule {}

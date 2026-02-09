@@ -12,7 +12,7 @@ export class AdminMigrationSeed {
 
     constructor(
         private readonly databaseService: DatabaseService,
-        private readonly helperEncryptionService: HelperEncryptionService,
+        private readonly helperEncryptionService: HelperEncryptionService
     ) {}
 
     @Command({
@@ -21,8 +21,8 @@ export class AdminMigrationSeed {
     })
     async create(): Promise<void> {
         // 1. Cấu hình thông tin Admin mặc định (Nên lấy từ .env để bảo mật)
-        const adminEmail = process.env.ADMIN_EMAIL || 'admin@smarthome.com';
-        const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@123456';
+        const adminEmail = process.env.ADMIN_EMAIL || 'admin@bktech.com';
+        const adminPassword = process.env.ADMIN_PASSWORD || 'AdminPassword123!';
         const adminPhone = '0988777666';
 
         try {
@@ -41,9 +41,8 @@ export class AdminMigrationSeed {
             }
 
             // 3. Hash mật khẩu (Sử dụng service mã hóa chuẩn của dự án)
-            const passwordHashed = await this.helperEncryptionService.createHash(
-                adminPassword
-            );
+            const passwordHashed =
+                await this.helperEncryptionService.createHash(adminPassword);
 
             // 4. Tạo Admin User mới
             const admin = await this.databaseService.user.create({
@@ -62,7 +61,6 @@ export class AdminMigrationSeed {
             );
             this.logger.log(`📧 Email: ${adminEmail}`);
             this.logger.log(`🔑 Password: ${adminPassword}`);
-
         } catch (error) {
             this.logger.error(
                 `❌ Error seeding admin: ${error.message}`,

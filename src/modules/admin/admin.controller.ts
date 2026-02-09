@@ -1,5 +1,18 @@
-import { Body, Controller, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
+import {
+    Body,
+    Controller,
+    Get,
+    Param,
+    Post,
+    Put,
+    UseGuards,
+} from '@nestjs/common';
+import {
+    ApiBearerAuth,
+    ApiOperation,
+    ApiTags,
+    ApiResponse,
+} from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 
 import { AdminService } from './admin.service';
@@ -53,7 +66,8 @@ export class AdminController {
     @Get('options/device-models')
     @ApiOperation({
         summary: 'Get Device Models for Dropdown',
-        description: 'Lấy danh sách Code & Name của thiết bị để hiển thị vào thẻ Select.'
+        description:
+            'Lấy danh sách Code & Name của thiết bị để hiển thị vào thẻ Select.',
     })
     getDeviceModelOptions() {
         return this.adminService.getDeviceModelsForDropdown();
@@ -62,7 +76,8 @@ export class AdminController {
     @Get('options/partners')
     @ApiOperation({
         summary: 'Get Partners for Dropdown',
-        description: 'Lấy danh sách Code & Name của công ty để hiển thị vào thẻ Select.'
+        description:
+            'Lấy danh sách Code & Name của công ty để hiển thị vào thẻ Select.',
     })
     getPartnerOptions() {
         return this.adminService.getPartnersForDropdown();
@@ -72,7 +87,8 @@ export class AdminController {
     @Get('stats/partners')
     @ApiOperation({
         summary: 'Get Partners usage statistics',
-        description: 'Lấy danh sách công ty kèm theo tình trạng sử dụng quota (Used/Total) của từng loại thiết bị.'
+        description:
+            'Lấy danh sách công ty kèm theo tình trạng sử dụng quota (Used/Total) của từng loại thiết bị.',
     })
     @ApiResponse({
         status: 200,
@@ -83,19 +99,12 @@ export class AdminController {
         return this.adminService.getPartnersUsage();
     }
 
-    // [UPDATE] API Sửa Partner Full
-    @Put('partners/:code')
-    @ApiOperation({
-        summary: 'Update Full Partner Info (Name + Quotas)',
-        description: 'Cập nhật tên công ty và danh sách hạn mức thiết bị trong cùng 1 request.'
-    })
-
-
-   // GIỮ LẠI: API Update duy nhất
+    // GIỮ LẠI: API Update duy nhất
     @Put('partners/:code')
     @ApiOperation({
         summary: 'Update Partner Info',
-        description: 'API đa năng: Có thể dùng để sửa tên, sửa quota, hoặc sửa cả hai cùng lúc.'
+        description:
+            'API đa năng: Có thể dùng để sửa tên, sửa quota, hoặc sửa cả hai cùng lúc.',
     })
     updatePartner(
         @Param('code') code: string,
@@ -107,7 +116,7 @@ export class AdminController {
     @Post('configs/mqtt')
     @ApiOperation({
         summary: 'Update all MQTT configs at once',
-        description: 'Cập nhật nhanh Host, User, Pass của MQTT Broker.'
+        description: 'Cập nhật nhanh Host, User, Pass của MQTT Broker.',
     })
     setMqttConfig(@Body() body: SetMqttConfigDto) {
         return this.adminService.setMqttConfig(body);

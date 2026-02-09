@@ -9,8 +9,9 @@ import { MCPModule } from '../common/mcp/mcp.module';
 import { HealthController } from './controllers/health.controller';
 import { TestModule } from 'src/modules/test/test.module';
 import { MqttModule } from 'src/common/mqtt/mqtt.module';
-import { ProvisioningModule } from 'src/modules/provisioning/provisioning.module';
 import { SocketModule } from 'src/modules/socket/socket.module';
+import { AdminModule } from 'src/modules/admin/admin.module';
+import { DeviceModule } from 'src/modules/device/device.module';
 @Module({
     imports: [
         // Shared Common Services
@@ -21,6 +22,7 @@ import { SocketModule } from 'src/modules/socket/socket.module';
 
         // Background Processing
         WorkerModule,
+        AdminModule,
 
         // Health Check
         TerminusModule,
@@ -29,9 +31,8 @@ import { SocketModule } from 'src/modules/socket/socket.module';
         UserModule,
         TestModule,
         MqttModule,
-        ProvisioningModule,
-        SocketModule
-
+        SocketModule,
+        DeviceModule,
     ],
     controllers: [HealthController],
 })
