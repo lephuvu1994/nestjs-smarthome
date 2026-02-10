@@ -7,4 +7,5 @@ export enum APP_ENVIRONMENT {
 
 export enum APP_BULLMQ_QUEUES {
     EMAIL = 'email_queue',
+    DEVICE_CONTROL = 'device_controll',
 }

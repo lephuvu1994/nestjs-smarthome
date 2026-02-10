@@ -9,7 +9,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- ENUMS ---
+// ==========================================
+// 1. ENUMS (Định nghĩa các loại dữ liệu cố định)
+// ==========================================
+
 enum UserRole {
   ADMIN
   USER
@@ -21,15 +24,72 @@ enum SharePermission {
   VIEWER   // Chỉ xem
 }
 
+enum DeviceProtocol {
+  MQTT_WIFI
+  ZIGBEE
+  GSM_4G
+  VIRTUAL
+}
+
+// Loại feature (nút bấm, cảm biến...)
+enum FeatureType {
+  BINARY    // Bật/Tắt (0/1)
+  DIMMER    // Thanh trượt (0-100)
+  SENSOR    // Chỉ đọc (Nhiệt độ, độ ẩm...)
+  TEXT      // Dạng chữ
+  COLOR     // Chỉnh màu (RGB/HEX)
+  CAMERA    // Stream
+}
+
 enum DeviceFeatureCategory {
   light
   switch
   sensor
   camera
-  switchDoor
+  lock
+  curtain
+  climate
 }
 
-// --- 1. SESSION ---
+// ==========================================
+// 2. USER & AUTH (Người dùng & Phiên)
+// ==========================================
+
+model User {
+  id               String    @id @default(uuid()) @db.Uuid
+  firstname        String?
+  lastname         String?
+  email            String?   @unique
+  phone            String?   @unique
+  password         String
+  role             UserRole  @default(USER)
+
+  // OTP
+  otpCode          String?   @map("otp_code")
+  otpExpire        DateTime? @map("otp_expire")
+
+  // Vị trí (Cache nhanh)
+  last_latitude         Float?
+  last_longitude        Float?
+  last_altitude         Float?
+  last_accuracy         Float?
+  last_location_changed DateTime?
+
+  // Quan hệ
+  locations        Location[]
+  owned_devices    Device[]      @relation("UserInventory")
+  shared_devices   DeviceShare[] @relation("SharedToUser")
+  owned_homes      Home[]        @relation("UserHomes")
+  home_memberships HomeMember[]
+  sessions         Session[]
+  calendars        Calendar[]
+
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  @@map("t_user")
+}
+
 model Session {
   id                 String   @id @default(uuid()) @db.Uuid
   hashedRefreshToken String   @unique
@@ -41,184 +101,195 @@ model Session {
   userId             String   @db.Uuid
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  created_at          DateTime @default(now())
-  updated_at          DateTime @updatedAt
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
 
   @@index([userId])
   @@map("t_session")
 }
-model User {
-  id               String   @id @default(uuid()) @db.Uuid
-  firstname        String?
-  lastname         String?
-  // Email và Phone đều là Optional và Unique
-  email     String?  @unique
-  phone     String?  @unique
-  password         String
-  role             UserRole @default(USER)
-  otpCode   String?   @map("otp_code")
-  otpExpire DateTime? @map("otp_expire")
 
-  // --- [NEW] VỊ TRÍ HIỆN TẠI (Cache nhanh giống Gladys) ---
-  last_latitude         Float?   // Vĩ độ mới nhất
-  last_longitude        Float?   // Kinh độ mới nhất
-  last_altitude         Float?   // Độ cao
-  last_accuracy         Float?   // Độ chính xác (mét)
-  last_location_changed DateTime? // Thời điểm cập nhật vị trí cuối
+// ==========================================
+// 3. CATALOG & PARTNER (Quản lý nguồn hàng & License)
+// ==========================================
 
-  // --- QUAN HỆ ---
-  // Vẫn giữ bảng này để lưu lịch sử di chuyển (History)
-  locations        Location[]
-
-  // ... (Các quan hệ khác giữ nguyên: devices, homes...)
-  owned_devices    Device[]      @relation("UserInventory")
-  shared_devices   DeviceShare[] @relation("SharedToUser")
-  owned_homes      Home[]        @relation("UserHomes")
-  home_memberships HomeMember[]
-  sessions         Session[]
-  calendars        Calendar[]
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  @@map("t_user")
-}
-// --- 3. HOME & ROOM (Groups) ---
-model Home {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  latitude  Float?
-  longitude Float?
-  radius    Int      @default(100)
-
-  owner_id  String   @db.Uuid
-  owner     User     @relation("UserHomes", fields: [owner_id], references: [id], onDelete: Cascade)
-
-  // [FIX] Thêm quan hệ ngược lại cho HomeMember
-  members   HomeMember[]
-
-  rooms     Room[]
-  devices   Device[]
-  scenes    Scene[]
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  @@map("t_home")
-}
-
-model HomeMember {
-  id        String   @id @default(uuid()) @db.Uuid
-
-  user_id   String   @db.Uuid
-  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  home_id   String   @db.Uuid
-  home      Home     @relation(fields: [home_id], references: [id], onDelete: Cascade)
-
-  role      String   @default("MEMBER")
-
-  @@unique([user_id, home_id])
-  @@map("t_home_member")
-}
-
-model Room {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-
-  home_id   String   @db.Uuid
-  home      Home     @relation(fields: [home_id], references: [id], onDelete: Cascade)
-
-  devices   Device[]
-
-  created_at DateTime @default(now())
-
-  @@map("t_room")
-}
-
-model Device {
+// Công ty / Đối tác
+model Partner {
   id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique // VD: "COMPANY_A"
   name        String
-  external_id String
-  selector    String   @unique
+  isActive    Boolean  @default(true)
 
-  // --- QUYỀN SỞ HỮU ---
-  owner_id    String   @db.Uuid
-  owner       User     @relation("UserInventory", fields: [owner_id], references: [id], onDelete: Cascade)
-  shared_users DeviceShare[]
-
-  // --- GROUPING ---
-  home_id     String?  @db.Uuid
-  home        Home?    @relation(fields: [home_id], references: [id], onDelete: SetNull)
-  room_id     String?  @db.Uuid
-  room        Room?    @relation(fields: [room_id], references: [id], onDelete: SetNull)
-
-  // --- [NEW] LIÊN KẾT PHẦN CỨNG ---
-  // Mỗi Device trên App ứng với 1 phần cứng vật lý cụ thể
-  hardware_id String?  @unique @db.Uuid // Unique vì 1 phần cứng chỉ được claim bởi 1 device tại 1 thời điểm
-  hardware    HardwareRegistry? @relation(fields: [hardware_id], references: [id])
-
-  // --- KỸ THUẬT ---
-  service_id  String   @db.Uuid
-  service     Service  @relation(fields: [service_id], references: [id])
-
-  features    DeviceFeature[]
-  params      DeviceParam[]
+  quotas      LicenseQuota[]
+  hardwares   HardwareRegistry[]
+  devices     Device[]
 
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
-  @@unique([external_id, service_id])
+  @@map("t_partner")
+}
+
+// Khuôn mẫu thiết bị (Blueprint)
+model DeviceModel {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique // VD: "WIFI_SWITCH_4"
+  name        String   // VD: "Công tắc WiFi 4 nút"
+  description String?
+
+  // [BLUEPRINT] JSON quy định tính năng
+  // VD: [{ "code": "sw1", "type": "BINARY", "name": "Nút 1" }]
+  featuresConfig Json    @default("[]") @db.JsonB
+
+  quotas      LicenseQuota[]
+  hardwares   HardwareRegistry[]
+  devices     Device[] // Quan hệ với các thiết bị thực tế đang chạy
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@map("t_device_model")
+}
+
+// Quản lý số lượng License
+model LicenseQuota {
+  id              String   @id @default(uuid()) @db.Uuid
+
+  partner_id       String   @db.Uuid
+  partner         Partner  @relation(fields: [partner_id], references: [id], onDelete: Cascade)
+
+  device_model_id   String   @db.Uuid
+  deviceModel     DeviceModel @relation(fields: [device_model_id], references: [id], onDelete: Cascade)
+
+  maxQuantity     Int      @default(0)
+  activatedCount  Int      @default(0)
+  isActive        Boolean  @default(true)
+
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@unique([partner_id, device_model_id])
+  @@map("t_license_quota")
+}
+
+// Sổ cái phần cứng (Chip vật lý)
+model HardwareRegistry {
+  id            String   @id @default(uuid()) @db.Uuid
+
+  // Định danh vật lý gốc (MAC Address / IMEI)
+  identifier          String   @unique
+
+  // Credentials kết nối MQTT (Cấp cho Chip)
+  deviceToken   String   @unique
+  mqttUsername  String?
+  mqttPassword  String?
+  mqttBroker    String?
+
+  // Thông tin quản lý
+  partner_id     String   @db.Uuid
+  partner       Partner  @relation(fields: [partner_id], references: [id])
+
+  device_model_id String   @db.Uuid
+  deviceModel   DeviceModel @relation(fields: [device_model_id], references: [id])
+
+  // Link tới Device Logic (1-1): Khi User add vào App thì field này sẽ có dữ liệu
+  device        Device?
+
+  firmwareVer   String?
+  ipAddress     String?
+  isBanned      Boolean  @default(false)
+  activatedAt   DateTime @default(now())
+
+  @@map("t_hardware_registry")
+}
+
+// ==========================================
+// 4. DEVICE INSTANCE (Thiết bị của User)
+// ==========================================
+
+model Device {
+  id           String   @id @default(uuid()) @db.Uuid
+
+  // Tên hiển thị trong App (User có thể đổi)
+  name         String
+
+  // 1. ĐỊNH DANH LOGIC (Dùng để giao tiếp API/MQTT Topic)
+  token        String         @unique @default(uuid())
+
+  // 2. ĐỊNH DANH VẬT LÝ & GIAO THỨC
+  identifier   String         // Copy từ HardwareRegistry sang hoặc tự nhập (nếu là Virtual)
+  protocol     DeviceProtocol @default(MQTT_WIFI)
+
+  // 3. LIÊN KẾT MODEL (Để biết nó là loại gì)
+  device_model_id String      @db.Uuid
+  deviceModel     DeviceModel @relation(fields: [device_model_id], references: [id])
+
+  // --- [NEW] LIÊN KẾT ĐỐI TÁC (Multi-tenancy) ---
+  // Thiết bị này thuộc quyền quản lý/phân phối của công ty nào?
+  partner_id   String   @db.Uuid
+  partner      Partner  @relation(fields: [partner_id], references: [id], onDelete: Cascade)
+
+  // 4. LIÊN KẾT PHẦN CỨNG (Nếu là thiết bị thật)
+  hardware_id  String?        @unique @db.Uuid
+  hardware     HardwareRegistry? @relation(fields: [hardware_id], references: [id])
+
+  // Sở hữu
+  owner_id     String   @db.Uuid
+  owner        User     @relation("UserInventory", fields: [owner_id], references: [id])
+  shared_users DeviceShare[]
+
+  // Vị trí
+  home_id      String?  @db.Uuid
+  home         Home?    @relation(fields: [home_id], references: [id], onDelete: SetNull)
+  room_id      String?  @db.Uuid
+  room         Room?    @relation(fields: [room_id], references: [id], onDelete: SetNull)
+
+  // Kỹ thuật
+  service_id   String?  @db.Uuid // Gladys service ID (Optional)
+  service      Service? @relation(fields: [service_id], references: [id])
+
+  // Dữ liệu runtime
+  features     DeviceFeature[]
+  params       DeviceParam[]
+
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Ràng buộc duy nhất: Một ID chỉ tồn tại duy nhất trong 1 protocol
+  @@unique([identifier, protocol])
+  @@index([identifier])
+  @@index([partner_id])
   @@map("t_device")
-}
-
-model DeviceShare {
-  id          String          @id @default(uuid()) @db.Uuid
-
-  device_id   String          @db.Uuid
-  device      Device          @relation(fields: [device_id], references: [id], onDelete: Cascade)
-
-  user_id     String          @db.Uuid
-  user        User            @relation("SharedToUser", fields: [user_id], references: [id], onDelete: Cascade)
-
-  permission  SharePermission @default(EDITOR)
-  created_at  DateTime        @default(now())
-
-  @@unique([device_id, user_id])
-  @@map("t_device_share")
-}
-
-// --- 5. SERVICES & FEATURES ---
-
-model Service {
-  id      String   @id @default(uuid()) @db.Uuid
-  name    String   @unique
-  status  String?
-  devices Device[]
-  @@map("t_service")
 }
 
 model DeviceFeature {
   id          String   @id @default(uuid()) @db.Uuid
-  name        String
-  selector    String   @unique
-  external_id String
 
+  // Mã code tính năng (VD: switch_1). Map từ JSON Config của Model
+  code        String
+  name        String   // Tên hiển thị (VD: Đèn trần)
+
+  // Metadata
   category    DeviceFeatureCategory
-  type        String
+  type        FeatureType // BINARY, DIMMER...
 
   min         Float?
   max         Float?
   unit        String?
   read_only   Boolean  @default(false)
-  last_value  Float?
-  last_value_string String?
 
+  // Giá trị hiện tại (Runtime Value)
+  last_value  Float?   // Dùng cho dạng số
+  last_value_string String? // Dùng cho dạng text/color
+
+  // Quan hệ
   device_id   String   @db.Uuid
   device      Device   @relation(fields: [device_id], references: [id], onDelete: Cascade)
 
+  // Lịch sử trạng thái
   states      DeviceFeatureState[]
 
+  // Mỗi thiết bị chỉ có 1 feature code duy nhất (VD: Device A chỉ có 1 nút 'switch_1')
+  @@unique([device_id, code])
   @@map("t_device_feature")
 }
 
@@ -246,52 +317,115 @@ model DeviceParam {
   @@map("t_device_param")
 }
 
-// --- 6. LOCATION ---
-model Location {
-  id        String   @id @default(uuid()) @db.Uuid
-  latitude  Float
-  longitude Float
-  accuracy  Float?
-  battery   Int?
+model DeviceShare {
+  id          String          @id @default(uuid()) @db.Uuid
+  device_id   String          @db.Uuid
+  device      Device          @relation(fields: [device_id], references: [id], onDelete: Cascade)
+  user_id     String          @db.Uuid
+  user        User            @relation("SharedToUser", fields: [user_id], references: [id], onDelete: Cascade)
+  permission  SharePermission @default(EDITOR)
+  created_at  DateTime        @default(now())
 
-  user_id   String   @db.Uuid
-  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
-  created_at DateTime @default(now())
-
-  @@index([user_id, created_at(sort: Desc)])
-  @@map("t_location")
+  @@unique([device_id, user_id])
+  @@map("t_device_share")
 }
 
-// --- 7. AUTOMATION ---
+// ==========================================
+// 5. HOME & ROOM (Nhà & Phòng)
+// ==========================================
+
+model Home {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  latitude  Float?
+  longitude Float?
+  radius    Int      @default(100)
+
+  owner_id  String   @db.Uuid
+  owner     User     @relation("UserHomes", fields: [owner_id], references: [id], onDelete: Cascade)
+
+  members   HomeMember[]
+  rooms     Room[]
+  devices   Device[]
+  scenes    Scene[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("t_home")
+}
+
+model HomeMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  user_id   String   @db.Uuid
+  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  home_id   String   @db.Uuid
+  home      Home     @relation(fields: [home_id], references: [id], onDelete: Cascade)
+  role      String   @default("MEMBER")
+
+  @@unique([user_id, home_id])
+  @@map("t_home_member")
+}
+
+model Room {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  home_id   String   @db.Uuid
+  home      Home     @relation(fields: [home_id], references: [id], onDelete: Cascade)
+  devices   Device[]
+  created_at DateTime @default(now())
+
+  @@map("t_room")
+}
+
+// ==========================================
+// 6. MISC (Scene, Location, System...)
+// ==========================================
+
+model Service {
+  id      String   @id @default(uuid()) @db.Uuid
+  name    String   @unique
+  status  String?
+  devices Device[]
+  @@map("t_service")
+}
+
 model Scene {
   id          String   @id @default(uuid()) @db.Uuid
   name        String
   active      Boolean  @default(true)
   triggers    Json     @default("[]")
   actions     Json     @default("[]")
-
   home_id     String   @db.Uuid
   home        Home     @relation(fields: [home_id], references: [id], onDelete: Cascade)
-
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
   @@map("t_scene")
 }
 
+model Location {
+  id        String   @id @default(uuid()) @db.Uuid
+  latitude  Float
+  longitude Float
+  accuracy  Float?
+  battery   Int?
+  user_id   String   @db.Uuid
+  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  created_at DateTime @default(now())
+
+  @@index([user_id, created_at(sort: Desc)])
+  @@map("t_location")
+}
+
 model Calendar {
   id          String   @id @default(uuid()) @db.Uuid
   name        String
-
   user_id     String   @db.Uuid
   user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-
   events      CalendarEvent[]
-
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
-
   @@map("t_calendar")
 }
 
@@ -301,132 +435,15 @@ model CalendarEvent {
   start       DateTime
   end         DateTime
   all_day     Boolean  @default(false)
-
   calendar_id String   @db.Uuid
   calendar    Calendar @relation(fields: [calendar_id], references: [id], onDelete: Cascade)
-
   @@index([start, end])
   @@map("t_calendar_event")
 }
 
-model Variable {
-  id       String @id @default(uuid()) @db.Uuid
-  key      String @unique
-  value    String
-  service_id String? @db.Uuid
-
-  @@map("t_variable")
-}
-
-// 1. Đối tác / Công ty mua Source (Tenant)
-model Partner {
-  id          String   @id @default(uuid()) @db.Uuid
-  code        String   @unique // Mã công ty (VD: "COMPANY_A")
-  name        String
-  isActive    Boolean  @default(true)
-
-  // Công ty này được cấp phép những loại thiết bị nào?
-  quotas      LicenseQuota[]
-
-  // Danh sách các thiết bị thực tế đã kích hoạt
-  hardwares   HardwareRegistry[]
-
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
-
-  @@map("t_partner")
-}
-
-// 2. Định nghĩa Model thiết bị (Product Catalog)
-model DeviceModel {
-  id          String   @id @default(uuid()) @db.Uuid
-  code        String   @unique // VD: "WIFI_SWITCH_4_GANG"
-  name        String   // "Công tắc Wifi 4 nút"
-  description String?
-
-  // [NEW] CẤU TRÚC DỮ LIỆU MẪU (Feature Template)
-  // Lưu JSON quy định model này có những tính năng gì.
-  // Ví dụ:
-  // [
-  //   { "code": "switch_1", "type": "boolean", "category": "switch", "name": "Nút 1" },
-  //   { "code": "switch_2", "type": "boolean", "category": "switch", "name": "Nút 2" },
-  //   { "code": "voltage",  "type": "decimal", "category": "sensor", "unit": "V" }
-  // ]
-  featureSpecs Json    @default("[]")
-
-  quotas      LicenseQuota[]
-  hardwares   HardwareRegistry[]
-
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
-
-  @@map("t_device_model")
-}
-
-// 3. Cấu hình giới hạn (Quota)
-model LicenseQuota {
-  id              String   @id @default(uuid()) @db.Uuid
-
-  partnerId       String   @db.Uuid
-  partner         Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-
-  deviceModelId   String   @db.Uuid
-  deviceModel     DeviceModel @relation(fields: [deviceModelId], references: [id], onDelete: Cascade)
-
-  maxQuantity     Int      @default(0) // Số lượng được phép kích hoạt
-  activatedCount  Int      @default(0) // Số lượng thực tế
-
-  isActive        Boolean  @default(true)
-
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
-
-  @@unique([partnerId, deviceModelId])
-  @@map("t_license_quota")
-}
-
-// 4. Sổ cái phần cứng (Physical Registry)
-model HardwareRegistry {
-  id            String   @id @default(uuid()) @db.Uuid
-
-  // Mã vật lý (Chip ID / MAC Address đã hash) gửi từ firmware lên
-  hmac          String   @unique
-
-  // [NEW] Credentials dành cho Chip
-  deviceToken   String   @unique // Token để chip gọi API
-  mqttUsername  String?
-  mqttPassword  String?
-  mqttBroker    String?  // mqtt.server.com
-
-  // [NEW] Link tới Logical Device
-  // Nếu field này có dữ liệu -> Thiết bị đã được User thêm vào App (Đã claim)
-  // Nếu field này null -> Thiết bị chưa có chủ (Chưa claim)
-  device        Device?
-
-  // Thuộc về Công ty nào?
-  partnerId     String   @db.Uuid
-  partner       Partner  @relation(fields: [partnerId], references: [id])
-
-  // Là loại thiết bị gì?
-  deviceModelId String   @db.Uuid
-  deviceModel   DeviceModel @relation(fields: [deviceModelId], references: [id])
-
-  // Metadata
-  firmwareVer   String?
-  ipAddress     String?
-
-  // Trạng thái quản lý
-  isBanned      Boolean  @default(false) // Chặn từ xa
-  activatedAt   DateTime @default(now())
-
-  @@map("t_hardware_registry")
-}
-
-// 5. [NEW] System Config (Cấu hình toàn hệ thống)
 model SystemConfig {
-  key         String @id // VD: "REFUND_QUOTA_ON_TRANSFER"
-  value       String // "true" / "false"
+  key         String @id
+  value       String
   description String?
-
   @@map("t_system_config")
 }

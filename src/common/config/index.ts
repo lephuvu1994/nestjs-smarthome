@@ -4,10 +4,4 @@ import DocConfig from './doc.config';
 import MCPConfig from './mcp.config';
 import RedisConfig from './redis.config';
 
-export default [
-    AppConfig,
-    RedisConfig,
-    AuthConfig,
-    DocConfig,
-    MCPConfig,
-];
+export default [AppConfig, RedisConfig, AuthConfig, DocConfig, MCPConfig];

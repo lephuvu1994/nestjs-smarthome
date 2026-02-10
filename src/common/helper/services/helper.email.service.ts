@@ -8,7 +8,12 @@ export class HelperEmailService {
     constructor(private readonly mailerService: MailerService) {}
 
     // Hàm gửi email chung
-    async sendEmail(payload: { to: string | string[]; subject: string; template: string; context: any }): Promise<void> {
+    async sendEmail(payload: {
+        to: string | string[];
+        subject: string;
+        template: string;
+        context: any;
+    }): Promise<void> {
         try {
             await this.mailerService.sendMail({
                 to: payload.to,
@@ -18,7 +23,10 @@ export class HelperEmailService {
             });
             this.logger.log(`Email sent to ${payload.to} successfully`);
         } catch (error) {
-            this.logger.error(`Failed to send email to ${payload.to}`, error.stack);
+            this.logger.error(
+                `Failed to send email to ${payload.to}`,
+                error.stack
+            );
             // QUAN TRỌNG: Phải ném lỗi ra để Worker bắt được và Queue biết để retry
             throw error;
         }
@@ -28,9 +36,14 @@ export class HelperEmailService {
     async sendForgotPassword(email: string, name: string, token: string) {
         const url = `https://your-app.com/reset-password?token=${token}`;
 
-        return this.sendEmail({ to: email, subject: 'Khôi phục mật khẩu Smart Home', template: 'forgot-password', context:{
-            name: name,
-            url: url,
-        }});
+        return this.sendEmail({
+            to: email,
+            subject: 'Khôi phục mật khẩu Smart Home',
+            template: 'forgot-password',
+            context: {
+                name: name,
+                url: url,
+            },
+        });
     }
 }

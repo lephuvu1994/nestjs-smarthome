@@ -1,19 +1,28 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateDeviceModelDto {
-    @ApiProperty({ example: 'SENSOR_HUMIDITY_T1', description: 'Mã Model thiết bị' })
+    @ApiProperty()
     @IsString()
     @IsNotEmpty()
     code: string;
 
-    @ApiProperty({ example: 'Cảm biến độ ẩm T1' })
+    @ApiProperty()
     @IsString()
     @IsNotEmpty()
     name: string;
 
-    @ApiProperty({ example: 'Mô tả chi tiết...', required: false })
-    @IsOptional()
+    @ApiProperty({ required: false })
     @IsString()
+    @IsOptional()
     description?: string;
+
+    // --- BẠN ĐANG THIẾU ĐOẠN NÀY ---
+    @ApiProperty({
+        description: 'Cấu hình tính năng JSON (Blueprint)',
+        example: [{ code: 'sw1', name: 'Switch 1', type: 'BINARY' }],
+    })
+    @IsArray() // Bắt buộc phải là mảng
+    @IsOptional() // Có thể để trống nếu muốn
+    featuresConfig?: any[];
 }

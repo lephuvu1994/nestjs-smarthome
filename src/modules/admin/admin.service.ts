@@ -105,6 +105,7 @@ export class AdminService {
             select: {
                 code: true,
                 name: true,
+                id: true,
             },
             orderBy: { name: 'asc' },
         });
@@ -142,51 +143,62 @@ export class AdminService {
             }
 
             // B. Cập nhật Quota (Chỉ chạy nếu có gửi quotas lên)
-            if (data.quotas && data.quotas.length > 0) {
-                const quotaPromises = data.quotas.map(async item => {
-                    const model = await prisma.deviceModel.findUnique({
-                        where: { code: item.deviceModelCode },
+            if (data.quotas) {
+                if (data.quotas.length === 0) {
+                    // Option A: Xóa (Nguy hiểm, mất activatedCount)
+                    // await tx.licenseQuota.deleteMany({ where: { partner_id: existingPartner.id } });
+
+                    // Option B: Vô hiệu hóa (An toàn)
+                    await prisma.licenseQuota.updateMany({
+                        where: { partner_id: existingPartner.id },
+                        data: { maxQuantity: 0, isActive: false },
                     });
+                } else {
+                    const quotaPromises = data.quotas.map(async item => {
+                        const model = await prisma.deviceModel.findUnique({
+                            where: { code: item.deviceModelCode },
+                        });
 
-                    if (!model) {
-                        // Có thể throw lỗi hoặc bỏ qua tuỳ logic, ở đây mình throw
-                        throw new HttpException(
-                            `Device Model Code '${item.deviceModelCode}' not found`,
-                            HttpStatus.BAD_REQUEST
-                        );
-                    }
+                        if (!model) {
+                            // Có thể throw lỗi hoặc bỏ qua tuỳ logic, ở đây mình throw
+                            throw new HttpException(
+                                `Device Model Code '${item.deviceModelCode}' not found`,
+                                HttpStatus.BAD_REQUEST
+                            );
+                        }
 
-                    return prisma.licenseQuota.upsert({
-                        where: {
-                            partnerId_deviceModelId: {
-                                partnerId: existingPartner.id,
-                                deviceModelId: model.id,
+                        return prisma.licenseQuota.upsert({
+                            where: {
+                                partner_id_device_model_id: {
+                                    partner_id: existingPartner.id,
+                                    device_model_id: model.id,
+                                },
                             },
-                        },
-                        update: { maxQuantity: item.quantity },
-                        create: {
-                            partnerId: existingPartner.id,
-                            deviceModelId: model.id,
-                            maxQuantity: item.quantity,
-                            activatedCount: 0,
-                            isActive: true,
-                        },
+                            update: { maxQuantity: item.quantity },
+                            create: {
+                                partner_id: existingPartner.id,
+                                device_model_id: model.id,
+                                maxQuantity: item.quantity,
+                                activatedCount: 0,
+                                isActive: true,
+                            },
+                        });
                     });
-                });
-
-                await Promise.all(quotaPromises);
+                    await Promise.all(quotaPromises);
+                }
             }
 
             // Trả về data mới nhất sau khi update
-            return this.getPartnerDetails(partnerCode); // (Hàm này bạn tự viết hoặc return existingPartner)
-        });
-    }
-
-    // Helper function để trả về data đẹp sau khi update
-    private async getPartnerDetails(code: string) {
-        return this.databaseService.partner.findUnique({
-            where: { code },
-            include: { quotas: true },
+            return await prisma.partner.findUnique({
+                where: { code: partnerCode },
+                include: {
+                    quotas: {
+                        include: {
+                            deviceModel: true, // Join thêm để lấy tên Model hiển thị cho đẹp
+                        },
+                    },
+                },
+            });
         });
     }
 

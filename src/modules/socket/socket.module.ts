@@ -11,9 +11,9 @@ import { HelperModule } from 'src/common/helper/helper.module'; // Để dùng c
     imports: [
         ConfigModule,
         JwtModule.register({}), // Import JwtModule để verify token
-        HelperModule
+        HelperModule,
     ],
     providers: [SocketGateway, SocketService],
-    exports: [SocketService], // Export service để module khác bắn noti
+    exports: [SocketService, SocketGateway], // Export service để module khác bắn noti
 })
 export class SocketModule {}

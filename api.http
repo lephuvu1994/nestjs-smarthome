@@ -1,42 +1,158 @@
-### Config biến môi trường
+# ==========================================
+# 1. KHAI BÁO BIẾN TĨNH (GLOBAL VARIABLES)
+# ==========================================
 @baseUrl = http://192.168.0.102:3001/v1
+@adminEmail = admin@bktech.com
+@adminPassword = AdminPassword123!
+@userEmail = cursor2@test.com
+@userPassword = Password@123!
 
-### 1. Đăng ký (Signup)
+# Các biến dưới đây chỉ là giá trị tĩnh, không lấy từ response
+@companyCode = BKTECH_GLOBAL
+@deviceModelCode = WIFI_SWITCH_4
+@macAddress = AA:BB:CC:11:22:33
+
+###
+# ==========================================
+# 2. AUTHENTICATION FLOW
+# ==========================================
+
+# 2.1. Đăng ký User mới
 POST {{baseUrl}}/auth/signup
 Content-Type: application/json
 
 {
     "firstName": "Dev2",
     "lastName": "Cursor2",
-    "email": "cursor2@test.com",
-    "password": "Password@123!"
+    "identifier": "{{userEmail}}",
+    "password": "{{userPassword}}"
 }
 
-### 2. Đăng nhập (Login)
+###
+
+# 2.2. Login Admin (Để lấy Token Admin)
+# @name loginAdmin
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-    "identifier": "cursor@test.com",
-    "password": "Password@123!"
+    "identifier": "{{adminEmail}}",
+    "password": "{{adminPassword}}"
 }
 
-### 3. Đăng nhập admin (Login)
+###
+
+# 2.3. Login User (Để lấy Token User)
+# @name loginUser
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-    "identifier": "admin@smarthome.com",
-    "password": "Admin@123456"
+    "identifier": "{{userEmail}}",
+    "password": "{{userPassword}}"
 }
 
+###
+# ==========================================
+# 3. ADMIN SETUP (Cần Token Admin)
+# ==========================================
 
-### 3. Đăng ký thiết bị mới (Register device)
-POST {{baseUrl}}/provisioning/register
+# 3.1. Tạo Partner (Công ty)
+# Sử dụng Token từ request loginAdmin ở trên
+POST {{baseUrl}}/admin/partners
+Authorization: Bearer {{loginAdmin.response.body.data.accessToken}}
 Content-Type: application/json
 
 {
-  "mac": "AA:BB:CC:11:22:33",
-  "deviceCode": "WIFI_SWITCH_4",
-  "companyCode": "COMPANY_A"
+    "code": "{{companyCode}}",
+    "name": "BKTech Global SmartHome"
+}
+
+### 3.1. Get List Partner (Công ty)
+# Sử dụng Token từ request loginAdmin ở trên
+# @name listpartners
+GET {{baseUrl}}/admin/options/partners
+Authorization: Bearer {{loginAdmin.response.body.data.accessToken}}
+Content-Type: application/json
+
+
+###
+
+# 3.2. Tạo Device Model (Khuôn mẫu)
+POST {{baseUrl}}/admin/device-models
+Authorization: Bearer {{loginAdmin.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+    "code": "{{deviceModelCode}}",
+    "name": "Công tắc WiFi 4 nút Pro",
+    "featuresConfig": [
+        { "code": "switch_1", "name": "Nút 1", "type": "BINARY", "category": "switch" },
+        { "code": "switch_2", "name": "Nút 2", "type": "BINARY", "category": "switch" }
+    ]
+}
+
+### 3.1. Get List Device Model (Loại thiết bị)
+# Sử dụng Token từ request loginAdmin ở trên
+# @name listDeviceModel
+GET {{baseUrl}}/admin/options/device-models
+Authorization: Bearer {{loginAdmin.response.body.data.accessToken}}
+Content-Type: application/json
+
+###
+
+# 3.3. Cấp License (Quota)
+# Admin cho phép BKTECH_GLOBAL bán 100 con WIFI_SWITCH_4
+PUT {{baseUrl}}/admin/partners/{{listpartners.response.body.data[0].code}}
+Authorization: Bearer {{loginAdmin.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+    "quotas": [
+        {
+            "deviceModelCode": "{{deviceModelCode}}",
+            "quantity": 100
+        }
+    ]
+}
+
+###
+# ==========================================
+# 4. USER DEVICE FLOW (Cần Token User)
+# ==========================================
+
+# 4.1. User đăng ký thiết bị (App gọi)
+# @name registerDevice
+POST {{baseUrl}}/devices/register
+Authorization: Bearer {{loginAdmin.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+    "identifier": "{{macAddress}}",
+    "deviceCode": "{{deviceModelCode}}",
+    "partner_id": "{{listpartners.response.body.data[0].id}}",
+    "protocol": "MQTT_WIFI",
+    "name": "Đèn Phòng Khách"
+}
+
+###
+
+# 4.2. Lấy chi tiết thiết bị (Để lấy Feature ID điều khiển)
+# @name getDevice
+GET {{baseUrl}}/devices/{{registerDevice.response.body.device.id}}
+Authorization: Bearer {{loginUser.response.body.data.accessToken}}
+
+###
+
+# 4.3. Điều khiển thiết bị (Bật Nút 1)
+# Lấy ID của feature đầu tiên từ response getDevice
+@featureId = {{getDevice.response.body.data.features[0].id}}
+
+POST {{baseUrl}}/devices/control
+Authorization: Bearer {{loginUser.response.body.data.accessToken}}
+Content-Type: application/json
+
+{
+    "featureId": "{{featureId}}",
+    "value": 1
 }
