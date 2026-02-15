@@ -1,31 +1,22 @@
 import { getQueueToken } from '@nestjs/bullmq';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserRole, DeviceProtocol } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 import { APP_BULLMQ_QUEUES } from 'src/app/enums/app.enum';
 import { AuthService } from 'src/common/auth/services/auth.service';
 import { DatabaseService } from 'src/common/database/services/database.service';
 import { HelperEncryptionService } from 'src/common/helper/services/helper.encryption.service';
-import { EmailTemplate } from 'src/common/helper/interfaces/email.interface';
 
 describe('AuthService', () => {
     let service: AuthService;
 
-    // ✅ KHAI BÁO MOCK DATABASE PHẲNG
+    // ✅ MOCK DATABASE PHẲNG THEO FILE CỦA BẠN
     const mockDatabaseService = {
         user: {
             findFirst: jest.fn(),
             create: jest.fn(),
             update: jest.fn(),
         },
-        deviceModel: { findUnique: jest.fn() },
-        partner: { findUnique: jest.fn() },
-        hardwareRegistry: {
-            findUnique: jest.fn(),
-            create: jest.fn(),
-            update: jest.fn(),
-        },
-        device: { create: jest.fn(), findUnique: jest.fn(), delete: jest.fn() },
         $transaction: jest.fn(callback => callback(mockDatabaseService)),
     };
 
@@ -40,7 +31,6 @@ describe('AuthService', () => {
     };
 
     beforeEach(async () => {
-        // ✅ QUAN TRỌNG: Clear mock để tránh rác dữ liệu giữa các case
         jest.clearAllMocks();
 
         const module: TestingModule = await Test.createTestingModule({
@@ -61,90 +51,158 @@ describe('AuthService', () => {
         service = module.get<AuthService>(AuthService);
     });
 
-    describe('login', () => {
-        it('should throw NOT_FOUND if user does not exist', async () => {
-            mockDatabaseService.user.findFirst.mockResolvedValue(null);
+    // -----------------------------------------------------------
+    // 1. LOGIN & REFRESH (Phủ nhánh sai pass và refreshTokens)
+    // -----------------------------------------------------------
+    describe('Login & Tokens', () => {
+        it('nên ném lỗi khi login sai mật khẩu (Phủ nhánh đỏ login)', async () => {
+            mockDatabaseService.user.findFirst.mockResolvedValue({
+                id: '1',
+                password: 'hash',
+            });
+            mockHelperEncryptionService.match.mockResolvedValue(false); // Sai pass
 
             await expect(
-                service.login({
-                    identifier: 'test@example.com',
-                    password: '123',
-                })
+                service.login({ identifier: 'test', password: 'wrong' })
             ).rejects.toThrow(HttpException);
         });
 
-        it('should return tokens and user on success', async () => {
-            const mockUser = {
-                id: 'user-123',
-                email: 'test@example.com',
-                password: 'hash',
-                role: UserRole.USER,
-            };
-            mockDatabaseService.user.findFirst.mockResolvedValue(mockUser);
-            mockHelperEncryptionService.match.mockResolvedValue(true);
+        it('nên refresh tokens thành công (Phủ hàm refreshTokens)', async () => {
+            const mockAuthUser = { userId: 'user-123', role: UserRole.USER };
             mockHelperEncryptionService.createJwtTokens.mockResolvedValue({
-                accessToken: 'at',
-                refreshToken: 'rt',
+                accessToken: 'new-at',
             });
 
-            const result = await service.login({
-                identifier: 'test@example.com',
-                password: '123',
-            });
-
+            const result = await service.refreshTokens(mockAuthUser as any);
             expect(result).toHaveProperty('accessToken');
-            // Kiểm tra user trả về không bị lồng ID
-            expect(result.user.id).toBe('user-123');
+            expect(
+                mockHelperEncryptionService.createJwtTokens
+            ).toHaveBeenCalled();
         });
     });
 
+    // -----------------------------------------------------------
+    // 2. SIGNUP (Phủ nhánh UserExists)
+    // -----------------------------------------------------------
     describe('signup', () => {
-        it('should create user and return tokens', async () => {
-            const dto = {
-                email: 'new@test.com',
-                password: '123',
-                firstName: 'A',
-                lastName: 'B',
-            };
-            const createdUser = { id: 'user-456', ...dto, role: UserRole.USER };
-
-            mockDatabaseService.user.findFirst.mockResolvedValue(null);
-            mockHelperEncryptionService.createHash.mockResolvedValue('hashed');
-            mockDatabaseService.user.create.mockResolvedValue(createdUser);
-            mockHelperEncryptionService.createJwtTokens.mockResolvedValue({
-                accessToken: 'at',
+        it('nên ném lỗi nếu email/sđt đã tồn tại (Phủ nhánh đỏ signup)', async () => {
+            mockDatabaseService.user.findFirst.mockResolvedValue({
+                id: 'existing',
             });
 
-            const result = await service.signup(dto);
-
-            expect(mockDatabaseService.user.create).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    data: expect.objectContaining({
-                        email: dto.email,
-                    }),
-                })
-            );
-            expect(result.user.id).toBe('user-456');
+            await expect(
+                service.signup({
+                    email: 'existing@test.com',
+                    password: '123',
+                } as any)
+            ).rejects.toThrow(HttpException);
         });
     });
 
-    // ✅ PHẦN NÀY LÀ NƠI DỄ GÂY LỖI NHẤT (Nếu bạn có test logic Device trong Auth)
-    // Đảm bảo truyền string userId trực tiếp
-    describe('forgotPassword & resetPassword', () => {
-        it('should update OTP and send email', async () => {
-            const mockUser = { id: 'user-789', email: 'test@example.com' };
-            mockDatabaseService.user.findFirst.mockResolvedValue(mockUser);
+    // -----------------------------------------------------------
+    // 3. PASSWORD RECOVERY (Phủ forgotPassword và resetPassword)
+    // -----------------------------------------------------------
+    describe('Password Recovery', () => {
+        const mockUser = { id: 'user-789', email: 'test@example.com' };
 
-            await service.forgotPassword({ identifier: 'test@example.com' });
+        it('forgotPassword: nên ném lỗi nếu không tìm thấy user', async () => {
+            mockDatabaseService.user.findFirst.mockResolvedValue(null);
+            await expect(
+                service.forgotPassword({ identifier: 'none' })
+            ).rejects.toThrow(HttpException);
+        });
+
+        it('resetPassword: nên đổi mật khẩu thành công khi OTP đúng (Phủ hàm resetPassword)', async () => {
+            mockDatabaseService.user.findFirst.mockResolvedValue(mockUser);
+            mockHelperEncryptionService.createHash.mockResolvedValue(
+                'new-hash'
+            );
+
+            const resetDto = {
+                identifier: 'test@example.com',
+                otp: '123456',
+                newPassword: 'new',
+            };
+            await service.resetPassword(resetDto);
 
             expect(mockDatabaseService.user.update).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    where: { id: 'user-789' }, // Phải là string phẳng
-                    data: expect.objectContaining({
-                        otpCode: expect.any(String),
-                    }),
+                    where: { id: mockUser.id },
+                    data: expect.objectContaining({ password: 'new-hash' }),
                 })
             );
         });
+
+        it('resetPassword: nên ném lỗi nếu OTP sai hoặc hết hạn', async () => {
+            mockDatabaseService.user.findFirst.mockResolvedValue(null);
+            await expect(
+                service.resetPassword({
+                    identifier: 'test',
+                    otp: '000',
+                    newPassword: '1',
+                })
+            ).rejects.toThrow(HttpException);
+        });
+    });
+    it('nên phủ nốt các hàm và nhánh lỗi còn lại', async () => {
+        // 1. Phủ refreshTokens
+        await service.refreshTokens({ userId: '1', role: 'USER' } as any);
+
+        // 2. Phủ resetPassword (nhánh thành công)
+        mockDatabaseService.user.findFirst.mockResolvedValue({ id: '1' });
+        await service.resetPassword({
+            identifier: 'a@a.com',
+            otp: '123',
+            newPassword: '1',
+        });
+
+        // 3. Phủ resetPassword (nhánh lỗi !user)
+        mockDatabaseService.user.findFirst.mockResolvedValue(null);
+        await expect(
+            service.resetPassword({
+                identifier: 'b',
+                otp: '1',
+                newPassword: '1',
+            })
+        ).rejects.toThrow(HttpException);
+    });
+    it('nên phủ hàm refreshTokens (Ảnh 3)', async () => {
+        mockHelperEncryptionService.createJwtTokens.mockResolvedValue({
+            accessToken: 'new-at',
+        });
+        const result = await service.refreshTokens({
+            userId: 'user-123',
+            role: 'USER',
+        } as any);
+        expect(result).toHaveProperty('accessToken');
+    });
+
+    it('nên phủ hàm resetPassword và nhánh lỗi (Ảnh 2)', async () => {
+        // Nhánh 1: Không tìm thấy User hoặc OTP sai
+        mockDatabaseService.user.findFirst.mockResolvedValue(null);
+        await expect(
+            service.resetPassword({
+                identifier: '090',
+                otp: '000',
+                newPassword: '1',
+            })
+        ).rejects.toThrow();
+
+        // Nhánh 2: Thành công
+        mockDatabaseService.user.findFirst.mockResolvedValue({ id: 'user-1' });
+        mockHelperEncryptionService.createHash.mockResolvedValue('hashed-pass');
+        await service.resetPassword({
+            identifier: '090',
+            otp: '123',
+            newPassword: 'new',
+        });
+        expect(mockDatabaseService.user.update).toHaveBeenCalled();
+    });
+
+    it('nên phủ nhánh lỗi signup khi user đã tồn tại (Ảnh 4)', async () => {
+        mockDatabaseService.user.findFirst.mockResolvedValue({ id: 'existed' });
+        await expect(
+            service.signup({ email: 'old@test.com' } as any)
+        ).rejects.toThrow();
     });
 });

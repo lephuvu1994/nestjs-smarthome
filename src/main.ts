@@ -3,7 +3,6 @@ import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
-import { Transport } from '@nestjs/microservices'; // <--- 1. Import thêm
 import { useContainer } from 'class-validator';
 import compression from 'compression';
 import express from 'express';
@@ -54,26 +53,6 @@ async function bootstrap(): Promise<void> {
 
         useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
-        // --- 2. Cấu hình MQTT Microservice (Hybrid App) ---
-        // Lấy config từ ConfigService hoặc fallback về process.env/mặc định
-        const mqttUser = config.get('mqtt.user') || process.env.MQTT_USER;
-        const mqttPass = config.get('mqtt.password') || process.env.MQTT_PASS;
-        // Nếu URL trong .env có dạng full (mqtt://localhost:1883) thì ưu tiên dùng, nếu không thì tự ghép
-        const mqttUrl = process.env.MQTT_URL;
-
-        app.connectMicroservice({
-            transport: Transport.MQTT,
-            options: {
-                url: mqttUrl,
-                username: mqttUser,
-                password: mqttPass,
-                // Client ID (Optional - nên có để broker dễ quản lý)
-                clientId:
-                    'eec-server-smarthome' +
-                    Math.random().toString(16).substr(2, 8),
-            },
-        });
-
         // Swagger for non-production
         if (env !== APP_ENVIRONMENT.PRODUCTION) {
             setupSwagger(app);
@@ -88,7 +67,6 @@ async function bootstrap(): Promise<void> {
         // Logging output
         const appUrl = await app.getUrl();
         logger.log(`Server running on: ${appUrl}`);
-        logger.log(`MQTT Microservice is connected to: ${mqttUrl}`);
 
         // Graceful shutdown (only in production - watch mode handles this differently)
         if (env === APP_ENVIRONMENT.PRODUCTION) {

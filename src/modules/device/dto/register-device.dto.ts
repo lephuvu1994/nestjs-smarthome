@@ -11,7 +11,7 @@ import {
 
 // 1. Enum định nghĩa các giao thức hỗ trợ
 export enum DeviceProtocol {
-    MQTT_WIFI = 'MQTT_WIFI', // Thiết bị dùng Wifi (ESP32/8266)
+    MQTT = 'MQTT', // Thiết bị dùng Wifi (ESP32/8266)
     GSM_4G = 'GSM_4G', // Thiết bị dùng Sim 4G
     ZIGBEE = 'ZIGBEE', // Thiết bị qua Hub Zigbee
     VIRTUAL = 'VIRTUAL', // Thiết bị ảo (Test)
@@ -24,7 +24,7 @@ export class RegisterDeviceDto {
     @ApiProperty({
         description: 'Giao thức kết nối của thiết bị',
         enum: DeviceProtocol,
-        example: DeviceProtocol.MQTT_WIFI,
+        example: DeviceProtocol.MQTT,
     })
     @IsEnum(DeviceProtocol)
     @IsNotEmpty()
@@ -38,7 +38,7 @@ export class RegisterDeviceDto {
     @IsString()
     @IsNotEmpty()
     // Logic: Nếu là WiFi -> Bắt buộc đúng format MAC Address
-    @ValidateIf(o => o.protocol === DeviceProtocol.MQTT_WIFI)
+    @ValidateIf(o => o.protocol === DeviceProtocol.MQTT)
     @Matches(/^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/, {
         message:
             'Identifier must be a valid MAC Address (e.g. AA:BB:CC:11:22:33)',

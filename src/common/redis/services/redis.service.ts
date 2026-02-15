@@ -9,51 +9,78 @@ export class RedisService implements OnModuleDestroy {
         this.redisClient.disconnect();
     }
 
-    /**
-     * Lấy giá trị String (Dùng cho check status online/offline)
-     */
+    // --- BASIC STRING (Dùng cho Status Online/Offline) ---
+
     async get(key: string): Promise<string | null> {
         return await this.redisClient.get(key);
     }
 
-    /**
-     * Lưu giá trị String với TTL (Dùng cho Heartbeat/Ping)
-     */
-    async set(key: string, value: string, ttl?: number): Promise<string> {
+    async set(
+        key: string,
+        value: string | number,
+        ttl?: number
+    ): Promise<string> {
+        const finalValue = String(value);
         if (ttl) {
-            return await this.redisClient.set(key, value, 'EX', ttl);
+            return await this.redisClient.set(key, finalValue, 'EX', ttl);
         }
-        return await this.redisClient.set(key, value);
+        return await this.redisClient.set(key, finalValue);
+    }
+
+    // --- HASH (Dùng cho Device Shadow / Telemetry) ---
+
+    /**
+     * [UPDATE] Lưu một Object nhiều trường vào Redis Hash
+     * Ví dụ: hmset('shadow:token', { temp: 25, hum: 60, status: 'ON' })
+     */
+    async hmset(key: string, data: Record<string, any>): Promise<number> {
+        // Redis không lưu được Nested Object, ta cần convert value sang string
+        const processedData: Record<string, string | number> = {};
+
+        for (const [field, value] of Object.entries(data)) {
+            // Nếu value là object (VD: màu sắc {r,g,b}), stringify nó
+            if (typeof value === 'object' && value !== null) {
+                processedData[field] = JSON.stringify(value);
+            } else {
+                // Giữ nguyên số hoặc string
+                processedData[field] = value as string | number;
+            }
+        }
+
+        // ioredis hỗ trợ truyền object vào hset (tương đương hmset cũ)
+        return await this.redisClient.hset(key, processedData);
     }
 
     /**
-     * Lưu Hash (Dùng cho Device Shadow: Desired/Reported state)
+     * Lưu lẻ 1 trường (Giữ nguyên cái cũ của bạn)
      */
     async hset(key: string, field: string, value: any): Promise<number> {
-        // Chuyển value sang string nếu nó là object để tiết kiệm và tránh lỗi [object Object]
         const finalValue =
             typeof value === 'object' ? JSON.stringify(value) : String(value);
         return await this.redisClient.hset(key, field, finalValue);
     }
 
-    /**
-     * Lấy giá trị từ Hash (Lấy trạng thái thiết bị)
-     */
     async hget(key: string, field: string): Promise<string | null> {
         return await this.redisClient.hget(key, field);
     }
 
     /**
-     * Lấy toàn bộ Hash (Lấy full trạng thái thiết bị)
+     * [UPDATE] Lấy toàn bộ Hash về
      */
     async hgetall(key: string): Promise<Record<string, string>> {
         return await this.redisClient.hgetall(key);
     }
 
-    /**
-     * Xóa Key
-     */
+    // --- UTILS ---
+
     async del(key: string): Promise<number> {
         return await this.redisClient.del(key);
+    }
+
+    /**
+     * Set thời gian hết hạn cho Key (nếu cần)
+     */
+    async expire(key: string, seconds: number): Promise<number> {
+        return await this.redisClient.expire(key, seconds);
     }
 }

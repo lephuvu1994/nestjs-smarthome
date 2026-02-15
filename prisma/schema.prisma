@@ -25,7 +25,7 @@ enum SharePermission {
 }
 
 enum DeviceProtocol {
-  MQTT_WIFI
+  MQTT
   ZIGBEE
   GSM_4G
   VIRTUAL
@@ -217,7 +217,7 @@ model Device {
 
   // 2. ĐỊNH DANH VẬT LÝ & GIAO THỨC
   identifier   String         // Copy từ HardwareRegistry sang hoặc tự nhập (nếu là Virtual)
-  protocol     DeviceProtocol @default(MQTT_WIFI)
+  protocol     DeviceProtocol @default(MQTT)
 
   // 3. LIÊN KẾT MODEL (Để biết nó là loại gì)
   device_model_id String      @db.Uuid
@@ -246,6 +246,12 @@ model Device {
   // Kỹ thuật
   service_id   String?  @db.Uuid // Gladys service ID (Optional)
   service      Service? @relation(fields: [service_id], references: [id])
+
+  // [OVERRIDE CONFIG]
+  // Dùng để ghi đè config của Model.
+  // VD: Modbus Slave ID riêng cho từng thiết bị lắp đặt
+  // { "modbus": { "slaveId": 2 }, "zigbee": { "endpoint": 1 } }
+  custom_config Json?   @db.JsonB
 
   // Dữ liệu runtime
   features     DeviceFeature[]

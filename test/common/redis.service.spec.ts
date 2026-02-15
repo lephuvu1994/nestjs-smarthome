@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RedisService } from 'src/common/redis/services/redis.service';
-import Redis from 'ioredis';
 
 describe('RedisService', () => {
     let service: RedisService;

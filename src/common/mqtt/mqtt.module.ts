@@ -1,32 +1,11 @@
 import { Global, Module } from '@nestjs/common';
-import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ConfigModule } from '@nestjs/config';
+import { MqttService } from './mqtt.service';
 
-// 1. Đây chính là cái tên Token mà bên Service sẽ @Inject()
-export const MQTT_SERVICE = 'MQTT_SERVICE';
-
-@Global() // <--- Quan trọng: Đặt là Global để dùng ở mọi nơi không cần import lại
+@Global() // [Optional] Đánh dấu Global nếu bạn muốn dùng ở mọi nơi mà không cần import lại
 @Module({
-    imports: [
-        ClientsModule.register([
-            {
-                name: MQTT_SERVICE,
-                transport: Transport.MQTT,
-                options: {
-                    // Logic lấy URL: Ưu tiên biến MQTT_URL, nếu không có thì tự ghép từ Host/Port
-                    url:
-                        process.env.MQTT_URL ||
-                        `mqtt://${process.env.MQTT_HOST || '127.0.0.1'}:${process.env.MQTT_PORT || 1883}`,
-                    username: process.env.MQTT_USER,
-                    password: process.env.MQTT_PASS,
-                    serializer: {
-                        serialize(value: any) {
-                            return JSON.stringify(value.data);
-                        },
-                    },
-                },
-            },
-        ]),
-    ],
-    exports: [ClientsModule], // Export ra để các module khác xài ké
+    imports: [ConfigModule], // Cần Config để lấy MQTT_HOST, MQTT_PORT
+    providers: [MqttService],
+    exports: [MqttService], // Export để IntegrationModule dùng được
 })
 export class MqttModule {}
